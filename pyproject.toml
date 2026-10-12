@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nn_numpy"
-version = "0.2.0"
+version = "1.0.0"
 description = "A feed-forward neural network built with NumPy only, benchmarked on UCI classification and regression tasks."
 readme = "README.md"
 license = { file = "LICENSE" }
