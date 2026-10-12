@@ -103,6 +103,14 @@ A2            0.00590 ± 0.00491       0.00469 ± 0.00569       3/5 seeds     0/
 A2-bias       0.00195 ± 0.00269       0.00616 ± 0.00913       2/5 seeds     0/5       A2-bias · muon · LR 0.0402 · bs 8 · wd 4.7e-04 · dropout 0.04
 A2-bn         0.00020 ± 0.00021       0.00150 ± 0.00279       1/5 seeds     0/5       A2-bn · adam · LR 0.198 · bs 64 · wd 1.3e-04 · dropout 0.00
 
+NumPy NN vs. TensorFlow (Keras) grid vs. TensorFlow (Keras) tuned — classification (test BCE)
+---------------------------------------------------------------------------------------------
+Architecture  NumPy NN                Grid                    Tuned                   NumPy better than grid / tuned
+A1            0.00171 ± 0.00209       0.00133 ± 0.00270       0.00337 ± 0.00400       2/5 / 3/5 seeds
+A2            0.00430 ± 0.00446       0.00590 ± 0.00491       0.00469 ± 0.00569       3/5 / 3/5 seeds
+A2-bias       0.04098 ± 0.09158       0.00195 ± 0.00269       0.00616 ± 0.00913       2/5 / 2/5 seeds
+A2-bn         0.00013 ± 0.00017       0.00020 ± 0.00021       0.00150 ± 0.00279       3/5 / 4/5 seeds
+
 PyTorch: grid vs. Optuna-tuned — classification (test BCE)
 ----------------------------------------------------------
 Architecture  Grid                    Tuned                   Tuned better  Diverged  Tuned configuration
@@ -110,6 +118,14 @@ A1            0.00638 ± 0.00960       0.00334 ± 0.00475       1/5 seeds     0/
 A2            0.00712 ± 0.00622       0.00496 ± 0.00578       2/5 seeds     0/5       A2 · muon · LR 0.00267 · bs 32 · wd 2.6e-06 · dropout 0.00
 A2-bias       0.00563 ± 0.00771       0.04002 ± 0.03856       0/5 seeds     0/5       A2-bias · muon · LR 0.03 · bs 8 · wd 1.6e-05 · dropout 0.21
 A2-bn         0.00007 ± 0.00004       0.00093 ± 0.00155       2/5 seeds     0/5       A2-bn · adam · LR 0.0416 · bs 64 · wd 1.2e-06 · dropout 0.14
+
+NumPy NN vs. PyTorch grid vs. PyTorch tuned — classification (test BCE)
+-----------------------------------------------------------------------
+Architecture  NumPy NN                Grid                    Tuned                   NumPy better than grid / tuned
+A1            0.00171 ± 0.00209       0.00638 ± 0.00960       0.00334 ± 0.00475       3/5 / 4/5 seeds
+A2            0.00430 ± 0.00446       0.00712 ± 0.00622       0.00496 ± 0.00578       4/5 / 3/5 seeds
+A2-bias       0.04098 ± 0.09158       0.00563 ± 0.00771       0.04002 ± 0.03856       3/5 / 4/5 seeds
+A2-bn         0.00013 ± 0.00017       0.00007 ± 0.00004       0.00093 ± 0.00155       2/5 / 3/5 seeds
 
 Regression — test MSE (lower is better), mean ± std over seeds
 --------------------------------------------------------------
@@ -204,6 +220,14 @@ A2            1.5443 ± 0.6253         2.0430 ± 0.9782         2/5 seeds     0/
 A2-bias       0.5053 ± 0.0959         0.3803 ± 0.0880         4/5 seeds     0/5       A2-bias · muon · LR 0.00292 · bs 16 · wd 2.4e-06 · dropout 0.01
 A2-bn         1.5934 ± 1.1476         3.3266 ± 2.7788         0/5 seeds     0/5       A2-bn · adam · LR 0.0236 · bs 64 · wd 6.2e-04 · dropout 0.02
 
+NumPy NN vs. TensorFlow (Keras) grid vs. TensorFlow (Keras) tuned — regression (test MSE)
+-----------------------------------------------------------------------------------------
+Architecture  NumPy NN                Grid                    Tuned                   NumPy better than grid / tuned
+A1            0.3445 ± 0.0424         0.3489 ± 0.0378         0.7951 ± 0.2841         2/5 / 5/5 seeds
+A2            1.7931 ± 0.7966         1.5443 ± 0.6253         2.0430 ± 0.9782         2/5 / 3/5 seeds
+A2-bias       0.7010 ± 0.1849         0.5053 ± 0.0959         0.3803 ± 0.0880         0/5 / 0/5 seeds
+A2-bn         1.3322 ± 0.3680         1.5934 ± 1.1476         3.3266 ± 2.7788         2/5 / 4/5 seeds
+
 PyTorch: grid vs. Optuna-tuned — regression (test MSE)
 ------------------------------------------------------
 Architecture  Grid                    Tuned                   Tuned better  Diverged  Tuned configuration
@@ -211,3 +235,11 @@ A1            0.6338 ± 0.2785         0.8559 ± 0.3659         2/5 seeds     0/
 A2            2.6774 ± 0.9684         0.5992 ± 0.1647         5/5 seeds     0/5       A2 · muon · LR 0.00765 · bs 16 · wd 1.1e-05 · dropout 0.01
 A2-bias       0.4224 ± 0.1467         0.3585 ± 0.0428         3/5 seeds     0/5       A2-bias · muon · LR 0.00315 · bs 16 · wd 1.1e-03 · dropout 0.00
 A2-bn         1.6431 ± 0.5991         1.1846 ± 0.7128         4/5 seeds     0/5       A2-bn · adam · LR 0.00509 · bs 128 · wd 4.2e-04 · dropout 0.03
+
+NumPy NN vs. PyTorch grid vs. PyTorch tuned — regression (test MSE)
+-------------------------------------------------------------------
+Architecture  NumPy NN                Grid                    Tuned                   NumPy better than grid / tuned
+A1            0.3445 ± 0.0424         0.6338 ± 0.2785         0.8559 ± 0.3659         5/5 / 5/5 seeds
+A2            1.7931 ± 0.7966         2.6774 ± 0.9684         0.5992 ± 0.1647         3/5 / 0/5 seeds
+A2-bias       0.7010 ± 0.1849         0.4224 ± 0.1467         0.3585 ± 0.0428         1/5 / 0/5 seeds
+A2-bn         1.3322 ± 0.3680         1.6431 ± 0.5991         1.1846 ± 0.7128         4/5 / 2/5 seeds

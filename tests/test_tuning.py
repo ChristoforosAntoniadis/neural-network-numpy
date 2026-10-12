@@ -11,7 +11,12 @@ import math
 import pytest
 
 from nn_numpy.benchmarks.data import load_problem_config, with_dropout
-from nn_numpy.benchmarks.report import describe_config, format_tuning_table
+from nn_numpy.benchmarks.report import (
+    count_wins,
+    describe_config,
+    format_three_way_table,
+    format_tuning_table,
+)
 
 # ------------------------------------------------------------------
 # Config and search space
@@ -333,3 +338,129 @@ def test_tuning_table_compares_grid_and_tuned_per_seed():
     assert "1/2 seeds" in row
     assert "0/2" in row  # no tuned run diverged
     assert "wd 1.0e-04 · dropout 0.20" in row
+
+
+def test_count_wins_pairs_by_seed_and_ignores_ties():
+    """
+    count_wins compares only seeds on both sides and counts strict improvements.
+
+    Notes
+    -----
+    Seed 1: NumPy better. Seed 2: a tie (not a win). Seed 3: NumPy worse.
+    Seed 4 exists only on the NumPy side, so it is not compared.
+    """
+    numpy_selected = [
+        {"seed": 1, "test_metric": 0.1},
+        {"seed": 2, "test_metric": 0.2},
+        {"seed": 3, "test_metric": 0.5},
+        {"seed": 4, "test_metric": 0.0},
+    ]
+    other_selected = [
+        {"seed": 1, "test_metric": 0.3},
+        {"seed": 2, "test_metric": 0.2},
+        {"seed": 3, "test_metric": 0.4},
+    ]
+
+    assert count_wins(numpy_selected, other_selected) == (1, 3)
+    assert count_wins(numpy_selected, []) == (0, 0)
+
+
+def test_three_way_table_puts_numpy_grid_and_tuned_in_one_row():
+    """
+    The three-way table selects each group per seed and shows both win counts.
+
+    Notes
+    -----
+    Two seeds. NumPy (selected on best_val_loss) beats the grid model on
+    both seeds and the tuned model on one, so the row ends "2/2 / 1/2 seeds".
+    Diverged NumPy runs are left out of the selection.
+    """
+    numpy_runs = [
+        {"architecture": "A1", "seed": 1, "best_val_loss": 0.1, "test_metric": 0.10},
+        {
+            "architecture": "A1",
+            "seed": 1,
+            "best_val_loss": 0.05,
+            "test_metric": 9.0,
+            "diverged": True,
+        },
+        {"architecture": "A1", "seed": 2, "best_val_loss": 0.1, "test_metric": 0.30},
+    ]
+    params = {"optimizer": "adam", "learning_rate": 0.1, "batch_size": 16}
+    grid = [
+        make_run("A1", 1, test=0.20, val=0.1, params=params),
+        make_run("A1", 2, test=0.40, val=0.1, params=params),
+    ]
+    tuned = [
+        make_run(
+            "A1", 1, test=0.05, val=0.1, params={**params, "weight_decay": 1e-4, "dropout": 0.1}
+        ),
+        make_run(
+            "A1", 2, test=0.35, val=0.1, params={**params, "weight_decay": 1e-4, "dropout": 0.1}
+        ),
+    ]
+
+    table = format_three_way_table("regression", numpy_runs, "pytorch", grid, tuned)
+
+    assert (
+        table.splitlines()[0]
+        == "NumPy NN vs. PyTorch grid vs. PyTorch tuned — regression (test MSE)"
+    )
+    row = next(line for line in table.splitlines() if line.startswith("A1"))
+    assert row.endswith("2/2 / 1/2 seeds")
+    assert "0.2000 ± 0.1414" in row  # the NumPy mean over seeds 1 and 2 (diverged run skipped)
+
+
+@pytest.mark.parametrize("with_tuned", [True, False])
+def test_learning_curves_include_the_tuned_model_when_available(tmp_path, monkeypatch, with_tuned):
+    """
+    The curve figure draws NumPy, grid and (if given) tuned lines, and works without tuning.
+
+    Parameters
+    ----------
+    tmp_path : pathlib.Path
+        pytest's temporary directory, used as the figure folder.
+    monkeypatch : pytest.MonkeyPatch
+        Redirects the figure folder and records the plotted lines.
+    with_tuned : bool
+        Whether a tuned run is passed.
+
+    Notes
+    -----
+    Each panel must have 3 lines with a tuned run (the third dashed) and 2
+    without; the PNG must be written either way.
+    """
+    import matplotlib
+
+    matplotlib.use("Agg")
+    from nn_numpy.benchmarks import report
+
+    monkeypatch.setattr(report, "BENCHMARK_FIGURES_DIR", str(tmp_path))
+    drawn = []
+    original_close = report.plt.close
+
+    def record_and_close(fig):
+        drawn.extend([[line.get_linestyle() for line in ax.get_lines()] for ax in fig.axes])
+        original_close(fig)
+
+    monkeypatch.setattr(report.plt, "close", record_and_close)
+
+    params = {"optimizer": "adam", "learning_rate": 0.1, "batch_size": 16}
+    numpy_run = {
+        "architecture": "A1",
+        "optimizer": "adabelief",
+        "learning_rate": 0.1,
+        "batch": 16,
+        "seed": 42,
+        "val_loss_history": [1.0, 0.5, 0.25],
+    }
+    grid_run = {**make_run("A1", 42, 0.1, 0.1, params), "val_loss_history": [1.0, 0.6]}
+    tuned_run = None
+    if with_tuned:
+        tuned_params = {**params, "weight_decay": 1e-4, "dropout": 0.1}
+        tuned_run = {**make_run("A1", 42, 0.1, 0.1, tuned_params), "val_loss_history": [0.9, 0.4]}
+
+    path = report.plot_learning_curves("pytorch", {"regression": (numpy_run, grid_run, tuned_run)})
+
+    assert path.startswith(str(tmp_path)) and path.endswith(".png")
+    assert drawn == [["-", "-", "--"]] if with_tuned else drawn == [["-", "-"]]

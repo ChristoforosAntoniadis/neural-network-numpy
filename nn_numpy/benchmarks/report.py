@@ -610,20 +610,132 @@ def format_tuning_table(
     return "\n".join(lines)
 
 
+def count_wins(
+    numpy_selected: list[dict[str, Any]], other_selected: list[dict[str, Any]]
+) -> tuple[int, int]:
+    """
+    Count on how many seeds the NumPy network beat another model.
+
+    Parameters
+    ----------
+    numpy_selected : list of dict
+        The NumPy network's selected run per seed (at most one per seed),
+        each with "seed" (int) and "test_metric" (float).
+    other_selected : list of dict
+        The other model's selected run per seed, same keys. A seed can be
+        missing on either side, e.g. when every run of that seed diverged.
+
+    Returns
+    -------
+    wins : int
+        Number of compared seeds where the NumPy network's test metric was
+        lower (better).
+    compared : int
+        Number of seeds that were compared.
+
+    Notes
+    -----
+    Processing:
+    1. Pair the runs by seed; only seeds present on both sides are
+       compared, as in the other per-seed tables.
+    2. Count the seeds where the NumPy network's test metric is strictly
+       lower; a tie is not a win.
+    """
+    other_by_seed = {r["seed"]: r for r in other_selected}
+    pairs = [(n, other_by_seed[n["seed"]]) for n in numpy_selected if n["seed"] in other_by_seed]
+    wins = sum(n["test_metric"] < o["test_metric"] for n, o in pairs)
+    return wins, len(pairs)
+
+
+def format_three_way_table(
+    problem_name: str,
+    numpy_runs: list[dict[str, Any]],
+    framework: str,
+    grid_runs: list[dict[str, Any]],
+    tuned_runs: list[dict[str, Any]],
+) -> str:
+    """
+    Compare, per architecture, the NumPy network with a framework's grid and tuned models.
+
+    Parameters
+    ----------
+    problem_name : str
+        "classification" or "regression".
+    numpy_runs : list of dict
+        All NumPy network runs for this problem.
+    framework : str
+        Framework library name, e.g. "tensorflow".
+    grid_runs : list of dict
+        The framework's grid runs for this problem.
+    tuned_runs : list of dict
+        The framework's Optuna-tuned runs for this problem.
+
+    Returns
+    -------
+    str
+        A table with one row per architecture the framework tuned: the test
+        metric (mean ± std over seeds) of the NumPy network (selected on
+        validation from its grid), the framework's grid-selected model and
+        its tuned model, and on how many seeds the NumPy network beat each
+        of the two framework versions (see count_wins).
+
+    Notes
+    -----
+    Processing, for each architecture:
+    1. Select per seed on validation: the NumPy network among its
+       non-diverged runs (best_val_loss), the framework grid and tuned
+       models among theirs (val_metric; diverged runs have NaN).
+    2. Write the three means and the two seed-by-seed win counts.
+
+    This puts the three groups side by side in one row; the separate
+    architecture and grid-vs-tuned tables give the diverged-run counts and
+    the tuned configurations.
+    """
+    metric, _, _ = PROBLEM_METRICS[problem_name]
+    digits = 5 if problem_name == "classification" else 4
+    label = LIBRARY_LABELS.get(framework, framework)
+    title = f"NumPy NN vs. {label} grid vs. {label} tuned — {problem_name} (test {metric})"
+    lines = [title, "-" * len(title)]
+    lines.append(
+        f"{'Architecture':<14}{'NumPy NN':<24}{'Grid':<24}{'Tuned':<24}"
+        f"{'NumPy better than grid / tuned'}"
+    )
+    for arch in dict.fromkeys(r["model"] for r in tuned_runs):
+        numpy_sel = select_per_seed(
+            [r for r in numpy_runs if r["architecture"] == arch and not is_diverged(r)],
+            "best_val_loss",
+        )
+        grid_sel = select_per_seed([r for r in grid_runs if r["model"] == arch], "val_metric")
+        tuned_sel = select_per_seed([r for r in tuned_runs if r["model"] == arch], "val_metric")
+        grid_wins, grid_n = count_wins(numpy_sel, grid_sel)
+        tuned_wins, tuned_n = count_wins(numpy_sel, tuned_sel)
+        lines.append(
+            f"{arch:<14}"
+            f"{mean_pm_std([r['test_metric'] for r in numpy_sel], digits):<24}"
+            f"{mean_pm_std([r['test_metric'] for r in grid_sel], digits):<24}"
+            f"{mean_pm_std([r['test_metric'] for r in tuned_sel], digits):<24}"
+            f"{grid_wins}/{grid_n} / {tuned_wins}/{tuned_n} seeds"
+        )
+    lines.append("")
+    return "\n".join(lines)
+
+
 def plot_learning_curves(
-    framework: str, curves: dict[str, tuple[dict[str, Any], dict[str, Any]]]
+    framework: str,
+    curves: dict[str, tuple[dict[str, Any], dict[str, Any], dict[str, Any] | None]],
 ) -> str:
     """
     Plot validation-loss curves of the NumPy network's and a framework's
-    selected models, one panel per problem.
+    selected models (grid and, if available, tuned), one panel per problem.
 
     Parameters
     ----------
     framework : str
         Framework library name, e.g. "tensorflow".
-    curves : dict of str to tuple of (dict, dict)
-        Problem name -> (selected NumPy run, selected framework run) on the
-        same seed. Each run has a "val_loss_history" (list of float).
+    curves : dict of str to tuple of (dict, dict, dict or None)
+        Problem name -> (selected NumPy run, selected framework grid run,
+        selected framework tuned run or None) on the same seed. Each run
+        has a "val_loss_history" (list of float).
 
     Returns
     -------
@@ -633,25 +745,31 @@ def plot_learning_curves(
     Notes
     -----
     Processing:
-    1. For each problem, plot both validation-loss histories against the
-       epoch number, labelled with each run's configuration.
+    1. For each problem, plot the validation-loss histories against the
+       epoch number, labelled with each run's configuration: NumPy (orange),
+       framework grid (blue) and framework tuned (green, dashed), when
+       tuned results exist.
     2. Use a log scale: the losses fall by orders of magnitude.
     3. Save the figure with the run stamp and close it.
     """
     label = LIBRARY_LABELS.get(framework, framework)
     fig, axes = plt.subplots(1, len(curves), figsize=(6.5 * len(curves), 4.5))
     axes = [axes] if len(curves) == 1 else list(axes)
-    for ax, (problem_name, (numpy_run, frame_run)) in zip(axes, curves.items()):
+    for ax, (problem_name, (numpy_run, frame_run, tuned_run)) in zip(axes, curves.items()):
         metric, _, _ = PROBLEM_METRICS[problem_name]
-        for run, name, color in [
-            (numpy_run, "NumPy", "tab:orange"),
-            (frame_run, label, "tab:blue"),
-        ]:
+        lines_to_plot = [
+            (numpy_run, "NumPy", "tab:orange", "-"),
+            (frame_run, label, "tab:blue", "-"),
+        ]
+        if tuned_run is not None:
+            lines_to_plot.append((tuned_run, f"{label}, tuned", "tab:green", "--"))
+        for run, name, color, style in lines_to_plot:
             history = run["val_loss_history"]
             ax.plot(
                 range(1, len(history) + 1),
                 history,
                 color=color,
+                linestyle=style,
                 label=f"{name}: {describe_config(run)}",
             )
         ax.set_yscale("log")
@@ -800,18 +918,36 @@ def main(numpy_results_path: str | None = None) -> None:
                     problem_name, numpy_runs, framework, library_runs[framework]
                 )
             )
-            # The first seed's selected models of both implementations.
+            # The first seed's selected models: NumPy, framework grid and,
+            # if tuned results exist, the framework's tuned model.
             numpy_first = selections["numpy"][0]
             frame_first = next(
                 r for r in selections[framework] if r["seed"] == numpy_first["seed"]
             )
-            framework_curves[problem_name] = (numpy_first, frame_first)
+            tuned_first = next(
+                (
+                    r
+                    for r in selections.get(f"{framework}_tuned", [])
+                    if r["seed"] == numpy_first["seed"]
+                ),
+                None,
+            )
+            framework_curves[problem_name] = (numpy_first, frame_first, tuned_first)
         for framework in FRAMEWORKS:
             tuned = f"{framework}_tuned"
             if framework in library_runs and tuned in library_runs:
                 lines.append(
                     format_tuning_table(
                         problem_name, framework, library_runs[framework], library_runs[tuned]
+                    )
+                )
+                lines.append(
+                    format_three_way_table(
+                        problem_name,
+                        numpy_runs,
+                        framework,
+                        library_runs[framework],
+                        library_runs[tuned],
                     )
                 )
         plot_problem(problem_name, rows)

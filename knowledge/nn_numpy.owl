@@ -2458,7 +2458,7 @@
     <nnfs:belongsToStage rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#InfrastructureStage"/>
     <nnfs:canvasNodeId>tests</nnfs:canvasNodeId>
     <nnfs:path>tests/</nnfs:path>
-    <nnfs:testCount rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">126</nnfs:testCount>
+    <nnfs:testCount rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">129</nnfs:testCount>
   </owl:NamedIndividual>
   <owl:NamedIndividual rdf:about="https://github.com/WarmupHero/neural-network-numpy/ontology#tests.test_batchnorm">
     <rdf:type rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#TestModule"/>
@@ -2681,6 +2681,7 @@
     <nnfs:imports rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#nn_numpy.benchmarks.tuning"/>
     <nnfs:partOf rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#tests"/>
     <nnfs:path>tests/test_tuning.py</nnfs:path>
+    <nnfs:requiresLibrary rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#matplotlib"/>
     <nnfs:requiresLibrary rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#pytest"/>
     <nnfs:requiresLibrary rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#torch"/>
   </owl:NamedIndividual>

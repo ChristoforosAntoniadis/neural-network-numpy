@@ -334,7 +334,7 @@
 		{
 			"id": "tests",
 			"type": "text",
-			"text": "### tests/ (pytest, 195 tests)\nFinite-difference gradient checks, layers, batch norm, dropout, Muon, clipping, splits, seeds, training, stop reasons, benchmarks, tuning",
+			"text": "### tests/ (pytest, 199 tests)\nFinite-difference gradient checks, layers, batch norm, dropout, Muon, clipping, splits, seeds, training, stop reasons, benchmarks, tuning",
 			"x": 5148,
 			"y": 3264,
 			"width": 520,
