@@ -24,6 +24,7 @@ from nn_numpy.modeling.train import (
     constant_prediction_baseline,
     get_seeds,
 )
+from nn_numpy.runlog import format_progress, should_report
 
 
 def load_problem_config(problem_name: str) -> dict[str, Any]:
@@ -160,3 +161,49 @@ def with_dropout(
     for layer in layers[:-1]:
         layer["dropout"] = dropout
     return layers
+
+
+def print_config_progress(record: dict[str, Any], done: int, total: int) -> None:
+    """
+    Print the progress line of one trained library configuration.
+
+    Parameters
+    ----------
+    record : dict
+        The configuration's result record, as built by a library's
+        run_model. Uses "model", "problem_name", "val_metric",
+        "train_seconds" and "params".
+    done : int
+        1-based number of the configuration within its grid.
+    total : int
+        Number of configurations in the grid.
+
+    Returns
+    -------
+    None
+        Prints e.g. "A2 | Config 3/16 | val MSE: 0.012345 | 9s | Params: {...}",
+        or nothing when should_report skips this configuration.
+
+    Notes
+    -----
+    Processing:
+    1. Skip the line unless should_report selects this configuration
+       (every one, for grids of up to MAX_PROGRESS_LINES).
+    2. Print the validation metric, the one model selection uses, and
+       the fit time.
+    """
+    if not should_report(done, total):
+        return
+    metric_name = "val BCE" if record["problem_name"] == "classification" else "val MSE"
+    print(
+        format_progress(
+            record["model"],
+            "Config",
+            done,
+            total,
+            metric_name,
+            record["val_metric"],
+            record["train_seconds"],
+            record["params"],
+        )
+    )

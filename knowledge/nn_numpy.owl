@@ -1903,6 +1903,7 @@
     <nnfs:belongsToStage rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#AnalysisStage"/>
     <nnfs:canvasNodeId>analysis</nnfs:canvasNodeId>
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.config"/>
+    <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.runlog"/>
     <nnfs:partOf rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy"/>
     <nnfs:path>nn_numpy/analysis.py</nnfs:path>
     <nnfs:reads rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#MainResultsJSON"/>
@@ -1923,6 +1924,7 @@
     <nnfs:canvasNodeId>bdata</nnfs:canvasNodeId>
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.config_loader"/>
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.modeling.train"/>
+    <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.runlog"/>
     <nnfs:partOf rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.benchmarks"/>
     <nnfs:path>nn_numpy/benchmarks/data.py</nnfs:path>
     <nnfs:requiresLibrary rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#numpy"/>
@@ -1945,6 +1947,7 @@
     <rdfs:comment>Compare the NumPy network with the library models.</rdfs:comment>
     <nnfs:canvasNodeId>breport</nnfs:canvasNodeId>
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.config"/>
+    <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.runlog"/>
     <nnfs:partOf rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.benchmarks"/>
     <nnfs:path>nn_numpy/benchmarks/report.py</nnfs:path>
     <nnfs:reads rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#BenchmarkResultsJSON"/>
@@ -1964,6 +1967,7 @@
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.benchmarks.sklearn_models"/>
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.benchmarks.torch_models"/>
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.config"/>
+    <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.runlog"/>
     <nnfs:partOf rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.benchmarks"/>
     <nnfs:path>nn_numpy/benchmarks/run.py</nnfs:path>
     <nnfs:reads rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#BenchmarkConfig"/>
@@ -1974,6 +1978,7 @@
     <rdfs:label>nn_numpy/benchmarks/sklearn_models.py</rdfs:label>
     <rdfs:comment>scikit-learn models for the library comparison.</rdfs:comment>
     <nnfs:canvasNodeId>sk</nnfs:canvasNodeId>
+    <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.benchmarks.data"/>
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.nn.metrics"/>
     <nnfs:partOf rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.benchmarks"/>
     <nnfs:path>nn_numpy/benchmarks/sklearn_models.py</nnfs:path>
@@ -1999,6 +2004,7 @@
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.benchmarks.data"/>
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.benchmarks.run"/>
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.config"/>
+    <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.runlog"/>
     <nnfs:partOf rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.benchmarks"/>
     <nnfs:path>nn_numpy/benchmarks/tuning.py</nnfs:path>
     <nnfs:reads rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#BenchmarkConfig"/>
@@ -2014,6 +2020,7 @@
     <nnfs:belongsToStage rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#AnalysisStage"/>
     <nnfs:canvasNodeId>comparisons</nnfs:canvasNodeId>
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.config"/>
+    <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.runlog"/>
     <nnfs:partOf rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy"/>
     <nnfs:path>nn_numpy/comparisons.py</nnfs:path>
     <nnfs:reads rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#MainResultsJSON"/>
@@ -2095,6 +2102,7 @@
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.nn.metrics"/>
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.nn.network"/>
     <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.nn.optimizers"/>
+    <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.runlog"/>
     <nnfs:partOf rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.modeling"/>
     <nnfs:path>nn_numpy/modeling/train.py</nnfs:path>
     <nnfs:requiresLibrary rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#numpy"/>
@@ -2222,6 +2230,14 @@
     <nnfs:requiresLibrary rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#pandas"/>
     <nnfs:requiresLibrary rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#seaborn"/>
     <nnfs:writes rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#EDAFigures"/>
+  </owl:NamedIndividual>
+  <owl:NamedIndividual rdf:about="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.runlog">
+    <rdf:type rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#Module"/>
+    <rdfs:label>nn_numpy/runlog.py</rdfs:label>
+    <rdfs:comment>Timestamped run logs, phase timings and progress lines for the long-running entry points.</rdfs:comment>
+    <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.config"/>
+    <nnfs:partOf rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy"/>
+    <nnfs:path>nn_numpy/runlog.py</nnfs:path>
   </owl:NamedIndividual>
   <owl:NamedIndividual rdf:about="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.scalers">
     <rdf:type rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#Module"/>
@@ -2470,7 +2486,7 @@
     <nnfs:belongsToStage rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#InfrastructureStage"/>
     <nnfs:canvasNodeId>tests</nnfs:canvasNodeId>
     <nnfs:path>tests/</nnfs:path>
-    <nnfs:testCount rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">129</nnfs:testCount>
+    <nnfs:testCount rdf:datatype="http://www.w3.org/2001/XMLSchema#integer">135</nnfs:testCount>
   </owl:NamedIndividual>
   <owl:NamedIndividual rdf:about="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#tests.test_batchnorm">
     <rdf:type rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#TestModule"/>
@@ -2637,6 +2653,16 @@
     <nnfs:path>tests/test_preprocessing.py</nnfs:path>
     <nnfs:requiresLibrary rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#numpy"/>
     <nnfs:requiresLibrary rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#pandas"/>
+  </owl:NamedIndividual>
+  <owl:NamedIndividual rdf:about="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#tests.test_runlog">
+    <rdf:type rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#TestModule"/>
+    <rdfs:label>tests/test_runlog.py</rdfs:label>
+    <rdfs:comment>Tests for the run log (nn_numpy.runlog): the timestamping tee, the phase timings and the progress-line interval.</rdfs:comment>
+    <nnfs:covers rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.runlog"/>
+    <nnfs:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#nn_numpy.runlog"/>
+    <nnfs:partOf rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#tests"/>
+    <nnfs:path>tests/test_runlog.py</nnfs:path>
+    <nnfs:requiresLibrary rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#pytest"/>
   </owl:NamedIndividual>
   <owl:NamedIndividual rdf:about="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#tests.test_seeds">
     <rdf:type rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#TestModule"/>

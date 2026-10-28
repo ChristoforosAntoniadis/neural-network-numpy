@@ -3,44 +3,44 @@ LIBRARY COMPARISON
 
 The NumPy network is compared with library models trained on exactly the same train / validation / test splits (same seeds), scored with the same NumPy metric functions. For every model, the configuration with the lowest validation metric is selected on each seed and its test metric is reported; the test set is never used for selection. 'Error removed' is 1 - test / constant-prediction baseline. 'Fit time' is the training time of the selected configuration on one seed (one CPU run each; the NumPy network trains up to 100 epochs with early stopping).
 
-NumPy network results: main_results_full_20261010-175120.json
-scikit-learn results: benchmark_sklearn_results_20261010-182057.json
-TensorFlow (Keras) results: benchmark_tensorflow_results_20261010-182459.json
-TensorFlow (Keras), tuned results: benchmark_tensorflow_tuned_results_20261010-223012.json
-PyTorch results: benchmark_pytorch_results_20261010-182459.json
-PyTorch, tuned results: benchmark_pytorch_tuned_results_20261010-223012.json
+NumPy network results: main_results_full_20261028-135829.json
+scikit-learn results: benchmark_sklearn_results_20261028-141526.json
+TensorFlow (Keras) results: benchmark_tensorflow_results_20261028-141526.json
+TensorFlow (Keras), tuned results: benchmark_tensorflow_tuned_results_20261028-162236.json
+PyTorch results: benchmark_pytorch_results_20261028-141526.json
+PyTorch, tuned results: benchmark_pytorch_tuned_results_20261028-162236.json
 
 Classification — test BCE (lower is better), mean ± std over seeds
 ------------------------------------------------------------------
 Model                                                       Test BCE                Accuracy            Error removed %     Fit time (s)  
-NumPy NN · A1 / A2                                          0.00168 ± 0.00212       1.0000 ± 0.0000     99.76 ± 0.31        0.39 ± 0.27   
-NumPy NN · all 9 architectures                              0.04097 ± 0.09159       0.9985 ± 0.0033     94.05 ± 13.30       0.51 ± 0.36   
+NumPy NN · A1 / A2                                          0.00168 ± 0.00212       1.0000 ± 0.0000     99.76 ± 0.31        0.39 ± 0.21   
+NumPy NN · all 9 architectures                              0.04097 ± 0.09159       0.9985 ± 0.0033     94.05 ± 13.30       0.40 ± 0.09   
 scikit-learn · logistic regression                          0.01117 ± 0.00988       0.9956 ± 0.0061     98.38 ± 1.43        0.01 ± 0.00   
-scikit-learn · SVM (RBF)                                    0.00361 ± 0.00075       1.0000 ± 0.0000     99.48 ± 0.11        0.02 ± 0.01   
-scikit-learn · random forest                                0.03783 ± 0.00909       0.9941 ± 0.0042     94.51 ± 1.32        0.72 ± 0.22   
-scikit-learn · gradient boosting                            0.02441 ± 0.02959       0.9948 ± 0.0072     96.45 ± 4.30        0.81 ± 0.24   
-scikit-learn · MLP                                          0.00033 ± 0.00023       1.0000 ± 0.0000     99.95 ± 0.03        0.13 ± 0.02   
-scikit-learn · best model (selected on validation)          0.00033 ± 0.00023       1.0000 ± 0.0000     99.95 ± 0.03        0.13 ± 0.02   
-TensorFlow (Keras) · A1                                     0.00133 ± 0.00270       1.0000 ± 0.0000     99.81 ± 0.39        6.31 ± 4.41   
-TensorFlow (Keras) · A2                                     0.00590 ± 0.00491       0.9978 ± 0.0020     99.14 ± 0.71        5.18 ± 1.50   
-TensorFlow (Keras) · A2-bias                                0.00195 ± 0.00269       0.9985 ± 0.0020     99.72 ± 0.39        4.22 ± 0.36   
-TensorFlow (Keras) · A2-bn                                  0.00020 ± 0.00021       1.0000 ± 0.0000     99.97 ± 0.03        7.68 ± 1.87   
-TensorFlow (Keras) · best model (selected on validation)    0.00195 ± 0.00269       0.9985 ± 0.0020     99.72 ± 0.39        4.22 ± 0.36   
-TensorFlow (Keras), tuned · A1                              0.00337 ± 0.00400       0.9985 ± 0.0020     99.51 ± 0.58        6.28 ± 2.02   
-TensorFlow (Keras), tuned · A2                              0.00469 ± 0.00569       0.9985 ± 0.0020     99.32 ± 0.83        6.42 ± 2.63   
-TensorFlow (Keras), tuned · A2-bias                         0.00616 ± 0.00913       0.9963 ± 0.0064     99.11 ± 1.33        9.27 ± 0.79   
-TensorFlow (Keras), tuned · A2-bn                           0.00150 ± 0.00279       0.9993 ± 0.0017     99.78 ± 0.41        5.00 ± 0.21   
-TensorFlow (Keras), tuned · best model (selected on validation)0.00014 ± 0.00024       1.0000 ± 0.0000     99.98 ± 0.04        7.42 ± 2.20   
-PyTorch · A1                                                0.00638 ± 0.00960       0.9985 ± 0.0020     99.07 ± 1.39        1.98 ± 1.45   
-PyTorch · A2                                                0.00712 ± 0.00622       0.9970 ± 0.0031     98.97 ± 0.90        5.25 ± 8.37   
-PyTorch · A2-bias                                           0.00563 ± 0.00771       0.9985 ± 0.0020     99.18 ± 1.12        7.24 ± 9.79   
-PyTorch · A2-bn                                             0.00007 ± 0.00004       1.0000 ± 0.0000     99.99 ± 0.01        0.88 ± 0.20   
-PyTorch · best model (selected on validation)               0.00564 ± 0.00771       0.9985 ± 0.0020     99.18 ± 1.12        7.33 ± 9.72   
-PyTorch, tuned · A1                                         0.00334 ± 0.00475       0.9993 ± 0.0017     99.52 ± 0.69        3.80 ± 0.91   
-PyTorch, tuned · A2                                         0.00496 ± 0.00578       0.9985 ± 0.0020     99.28 ± 0.84        5.17 ± 2.86   
-PyTorch, tuned · A2-bias                                    0.04002 ± 0.03856       0.9926 ± 0.0052     94.19 ± 5.60        13.50 ± 0.17  
-PyTorch, tuned · A2-bn                                      0.00093 ± 0.00155       0.9993 ± 0.0017     99.87 ± 0.23        1.08 ± 0.21   
-PyTorch, tuned · best model (selected on validation)        0.00663 ± 0.01236       0.9985 ± 0.0020     99.04 ± 1.80        3.50 ± 5.56   
+scikit-learn · SVM (RBF)                                    0.00361 ± 0.00075       1.0000 ± 0.0000     99.48 ± 0.11        0.01 ± 0.00   
+scikit-learn · random forest                                0.03783 ± 0.00909       0.9941 ± 0.0042     94.51 ± 1.32        0.50 ± 0.01   
+scikit-learn · gradient boosting                            0.02441 ± 0.02959       0.9948 ± 0.0072     96.45 ± 4.30        0.46 ± 0.10   
+scikit-learn · MLP                                          0.00033 ± 0.00023       1.0000 ± 0.0000     99.95 ± 0.03        0.09 ± 0.01   
+scikit-learn · best model (selected on validation)          0.00033 ± 0.00023       1.0000 ± 0.0000     99.95 ± 0.03        0.09 ± 0.01   
+TensorFlow (Keras) · A1                                     0.00133 ± 0.00270       1.0000 ± 0.0000     99.81 ± 0.39        6.97 ± 5.40   
+TensorFlow (Keras) · A2                                     0.00590 ± 0.00491       0.9978 ± 0.0020     99.14 ± 0.71        5.61 ± 1.75   
+TensorFlow (Keras) · A2-bias                                0.00195 ± 0.00269       0.9985 ± 0.0020     99.72 ± 0.39        4.67 ± 0.65   
+TensorFlow (Keras) · A2-bn                                  0.00020 ± 0.00021       1.0000 ± 0.0000     99.97 ± 0.03        8.25 ± 1.37   
+TensorFlow (Keras) · best model (selected on validation)    0.00195 ± 0.00269       0.9985 ± 0.0020     99.72 ± 0.39        4.67 ± 0.65   
+TensorFlow (Keras), tuned · A1                              0.00337 ± 0.00400       0.9985 ± 0.0020     99.51 ± 0.58        6.47 ± 2.12   
+TensorFlow (Keras), tuned · A2                              0.00469 ± 0.00569       0.9985 ± 0.0020     99.32 ± 0.83        6.48 ± 2.66   
+TensorFlow (Keras), tuned · A2-bias                         0.00616 ± 0.00913       0.9963 ± 0.0064     99.11 ± 1.33        9.68 ± 0.62   
+TensorFlow (Keras), tuned · A2-bn                           0.00150 ± 0.00279       0.9993 ± 0.0017     99.78 ± 0.41        5.17 ± 0.29   
+TensorFlow (Keras), tuned · best model (selected on validation)0.00014 ± 0.00024       1.0000 ± 0.0000     99.98 ± 0.04        7.77 ± 2.24   
+PyTorch · A1                                                0.00638 ± 0.00960       0.9985 ± 0.0020     99.07 ± 1.39        1.21 ± 0.24   
+PyTorch · A2                                                0.00712 ± 0.00622       0.9970 ± 0.0031     98.97 ± 0.90        4.46 ± 7.23   
+PyTorch · A2-bias                                           0.00563 ± 0.00771       0.9985 ± 0.0020     99.18 ± 1.12        6.51 ± 8.42   
+PyTorch · A2-bn                                             0.00007 ± 0.00004       1.0000 ± 0.0000     99.99 ± 0.01        0.81 ± 0.12   
+PyTorch · best model (selected on validation)               0.00564 ± 0.00771       0.9985 ± 0.0020     99.18 ± 1.12        6.55 ± 8.38   
+PyTorch, tuned · A1                                         0.00334 ± 0.00475       0.9993 ± 0.0017     99.52 ± 0.69        3.17 ± 0.63   
+PyTorch, tuned · A2                                         0.00496 ± 0.00578       0.9985 ± 0.0020     99.28 ± 0.84        5.09 ± 2.72   
+PyTorch, tuned · A2-bias                                    0.04002 ± 0.03856       0.9926 ± 0.0052     94.19 ± 5.60        13.75 ± 0.22  
+PyTorch, tuned · A2-bn                                      0.00093 ± 0.00155       0.9993 ± 0.0017     99.87 ± 0.23        1.10 ± 0.21   
+PyTorch, tuned · best model (selected on validation)        0.00663 ± 0.01236       0.9985 ± 0.0020     99.04 ± 1.80        3.57 ± 5.66   
 
 Most often selected configuration:
 - NumPy NN · A1 / A2: A1 · adabelief · LR 0.1 · bs 16 (3/5 seeds)
@@ -130,34 +130,34 @@ A2-bn         0.00013 ± 0.00017       0.00007 ± 0.00004       0.00093 ± 0.001
 Regression — test MSE (lower is better), mean ± std over seeds
 --------------------------------------------------------------
 Model                                                       Test MSE                R²                  Error removed %     Fit time (s)  
-NumPy NN · A1 / A2                                          0.3445 ± 0.0424         0.9965 ± 0.0006     99.65 ± 0.06        0.36 ± 0.17   
-NumPy NN · all 9 architectures                              0.3445 ± 0.0424         0.9965 ± 0.0006     99.65 ± 0.06        0.36 ± 0.17   
+NumPy NN · A1 / A2                                          0.3445 ± 0.0424         0.9965 ± 0.0006     99.65 ± 0.06        0.33 ± 0.12   
+NumPy NN · all 9 architectures                              0.3445 ± 0.0424         0.9965 ± 0.0006     99.65 ± 0.06        0.33 ± 0.12   
 scikit-learn · ridge regression                             9.2059 ± 0.9615         0.9084 ± 0.0077     90.85 ± 0.77        0.00 ± 0.00   
-scikit-learn · SVR (RBF)                                    0.3930 ± 0.1141         0.9960 ± 0.0015     99.60 ± 0.14        1.73 ± 0.37   
-scikit-learn · random forest                                0.2698 ± 0.0646         0.9973 ± 0.0008     99.73 ± 0.08        0.61 ± 0.10   
-scikit-learn · gradient boosting                            0.1842 ± 0.0449         0.9981 ± 0.0005     99.81 ± 0.05        0.70 ± 0.57   
-scikit-learn · MLP                                          0.5437 ± 0.1680         0.9945 ± 0.0020     99.45 ± 0.20        1.66 ± 0.75   
-scikit-learn · best model (selected on validation)          0.1842 ± 0.0449         0.9981 ± 0.0005     99.81 ± 0.05        0.70 ± 0.57   
-TensorFlow (Keras) · A1                                     0.3489 ± 0.0378         0.9965 ± 0.0006     99.65 ± 0.06        7.37 ± 1.57   
-TensorFlow (Keras) · A2                                     1.5443 ± 0.6253         0.9848 ± 0.0056     98.48 ± 0.57        7.35 ± 2.62   
-TensorFlow (Keras) · A2-bias                                0.5053 ± 0.0959         0.9949 ± 0.0012     99.49 ± 0.12        6.47 ± 0.34   
-TensorFlow (Keras) · A2-bn                                  1.5934 ± 1.1476         0.9840 ± 0.0115     98.40 ± 1.14        9.11 ± 0.85   
-TensorFlow (Keras) · best model (selected on validation)    0.3585 ± 0.0419         0.9964 ± 0.0006     99.64 ± 0.06        7.21 ± 1.65   
-TensorFlow (Keras), tuned · A1                              0.7951 ± 0.2841         0.9921 ± 0.0027     99.21 ± 0.27        9.14 ± 0.29   
-TensorFlow (Keras), tuned · A2                              2.0430 ± 0.9782         0.9793 ± 0.0107     97.93 ± 1.07        10.59 ± 1.96  
-TensorFlow (Keras), tuned · A2-bias                         0.3803 ± 0.0880         0.9962 ± 0.0010     99.62 ± 0.10        11.71 ± 1.27  
-TensorFlow (Keras), tuned · A2-bn                           3.3266 ± 2.7788         0.9671 ± 0.0271     96.71 ± 2.70        6.82 ± 2.11   
-TensorFlow (Keras), tuned · best model (selected on validation)0.3803 ± 0.0880         0.9962 ± 0.0010     99.62 ± 0.10        11.71 ± 1.27  
-PyTorch · A1                                                0.6338 ± 0.2785         0.9937 ± 0.0027     99.37 ± 0.27        1.56 ± 0.29   
-PyTorch · A2                                                2.6774 ± 0.9684         0.9737 ± 0.0086     97.38 ± 0.86        1.22 ± 0.47   
-PyTorch · A2-bias                                           0.4224 ± 0.1467         0.9958 ± 0.0014     99.58 ± 0.14        1.77 ± 0.64   
-PyTorch · A2-bn                                             1.6431 ± 0.5991         0.9836 ± 0.0060     98.36 ± 0.60        4.76 ± 8.25   
-PyTorch · best model (selected on validation)               0.4224 ± 0.1467         0.9958 ± 0.0014     99.58 ± 0.14        1.77 ± 0.64   
-PyTorch, tuned · A1                                         0.8559 ± 0.3659         0.9914 ± 0.0037     99.14 ± 0.37        0.96 ± 0.18   
-PyTorch, tuned · A2                                         0.5992 ± 0.1647         0.9940 ± 0.0021     99.40 ± 0.20        6.36 ± 0.99   
-PyTorch, tuned · A2-bias                                    0.3585 ± 0.0428         0.9964 ± 0.0006     99.64 ± 0.06        11.70 ± 0.92  
-PyTorch, tuned · A2-bn                                      1.1846 ± 0.7128         0.9883 ± 0.0065     98.83 ± 0.65        0.89 ± 0.21   
-PyTorch, tuned · best model (selected on validation)        0.3585 ± 0.0428         0.9964 ± 0.0006     99.64 ± 0.06        11.70 ± 0.92  
+scikit-learn · SVR (RBF)                                    0.3930 ± 0.1141         0.9960 ± 0.0015     99.60 ± 0.14        1.45 ± 0.28   
+scikit-learn · random forest                                0.2698 ± 0.0646         0.9973 ± 0.0008     99.73 ± 0.08        0.43 ± 0.01   
+scikit-learn · gradient boosting                            0.1842 ± 0.0449         0.9981 ± 0.0005     99.81 ± 0.05        0.28 ± 0.01   
+scikit-learn · MLP                                          0.5437 ± 0.1680         0.9945 ± 0.0020     99.45 ± 0.20        1.24 ± 0.72   
+scikit-learn · best model (selected on validation)          0.1842 ± 0.0449         0.9981 ± 0.0005     99.81 ± 0.05        0.28 ± 0.01   
+TensorFlow (Keras) · A1                                     0.3489 ± 0.0378         0.9965 ± 0.0006     99.65 ± 0.06        7.26 ± 1.56   
+TensorFlow (Keras) · A2                                     1.5443 ± 0.6253         0.9848 ± 0.0056     98.48 ± 0.57        7.13 ± 2.56   
+TensorFlow (Keras) · A2-bias                                0.5053 ± 0.0959         0.9949 ± 0.0012     99.49 ± 0.12        6.39 ± 0.33   
+TensorFlow (Keras) · A2-bn                                  1.5934 ± 1.1476         0.9840 ± 0.0115     98.40 ± 1.14        8.78 ± 0.66   
+TensorFlow (Keras) · best model (selected on validation)    0.3585 ± 0.0419         0.9964 ± 0.0006     99.64 ± 0.06        7.10 ± 1.64   
+TensorFlow (Keras), tuned · A1                              0.7951 ± 0.2841         0.9921 ± 0.0027     99.21 ± 0.27        9.43 ± 0.27   
+TensorFlow (Keras), tuned · A2                              2.0430 ± 0.9782         0.9793 ± 0.0107     97.93 ± 1.07        10.85 ± 2.01  
+TensorFlow (Keras), tuned · A2-bias                         0.3803 ± 0.0880         0.9962 ± 0.0010     99.62 ± 0.10        11.91 ± 1.25  
+TensorFlow (Keras), tuned · A2-bn                           3.3266 ± 2.7788         0.9671 ± 0.0271     96.71 ± 2.70        6.92 ± 2.17   
+TensorFlow (Keras), tuned · best model (selected on validation)0.3803 ± 0.0880         0.9962 ± 0.0010     99.62 ± 0.10        11.91 ± 1.25  
+PyTorch · A1                                                0.6338 ± 0.2785         0.9937 ± 0.0027     99.37 ± 0.27        1.61 ± 0.26   
+PyTorch · A2                                                2.6774 ± 0.9684         0.9737 ± 0.0086     97.38 ± 0.86        1.21 ± 0.52   
+PyTorch · A2-bias                                           0.4224 ± 0.1467         0.9958 ± 0.0014     99.58 ± 0.14        1.86 ± 0.64   
+PyTorch · A2-bn                                             1.6431 ± 0.5991         0.9836 ± 0.0060     98.36 ± 0.60        3.49 ± 5.38   
+PyTorch · best model (selected on validation)               0.4224 ± 0.1467         0.9958 ± 0.0014     99.58 ± 0.14        1.86 ± 0.64   
+PyTorch, tuned · A1                                         0.8559 ± 0.3659         0.9914 ± 0.0037     99.14 ± 0.37        0.96 ± 0.19   
+PyTorch, tuned · A2                                         0.5992 ± 0.1647         0.9940 ± 0.0021     99.40 ± 0.20        6.53 ± 0.97   
+PyTorch, tuned · A2-bias                                    0.3585 ± 0.0428         0.9964 ± 0.0006     99.64 ± 0.06        11.93 ± 1.04  
+PyTorch, tuned · A2-bn                                      1.1846 ± 0.7128         0.9883 ± 0.0065     98.83 ± 0.65        0.89 ± 0.20   
+PyTorch, tuned · best model (selected on validation)        0.3585 ± 0.0428         0.9964 ± 0.0006     99.64 ± 0.06        11.93 ± 1.04  
 
 Most often selected configuration:
 - NumPy NN · A1 / A2: A1 · adabelief · LR 0.1 · bs 16 (2/5 seeds)

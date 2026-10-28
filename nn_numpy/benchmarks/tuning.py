@@ -33,6 +33,13 @@ from nn_numpy.benchmarks.run import (
     save_results,
 )
 from nn_numpy.config import REPORT_DIR, ROOT_DIR, RUN_STAMP, stamped_filename
+from nn_numpy.runlog import (
+    begin_phase,
+    finish_run,
+    format_progress,
+    should_report,
+    start_run_log,
+)
 
 # Location of the tuning configuration.
 TUNING_CONFIG_PATH = os.path.join(ROOT_DIR, "configs", "tuning_experiments.json")
@@ -164,7 +171,8 @@ def tune_model(
     3. Each trial draws a configuration, trains it with the library's
        run_model and returns the validation metric. A diverged run returns
        infinity, so it is never chosen.
-    4. Return the best trial's configuration and every trial's record.
+    4. After each trial, print its progress line (report_trial).
+    5. Return the best trial's configuration and every trial's record.
 
     The test set is never used here: only the validation metric guides the
     search.
@@ -211,9 +219,49 @@ def tune_model(
         value = record["val_metric"]
         return value if math.isfinite(value) else math.inf
 
+    metric_name = "val BCE" if problem_name == "classification" else "val MSE"
+
+    def report_trial(study: optuna.study.Study, trial: optuna.trial.FrozenTrial) -> None:
+        """
+        Print the progress line of one finished trial (an Optuna callback).
+
+        Parameters
+        ----------
+        study : optuna.study.Study
+            The running study (unused; Optuna passes it to every callback).
+        trial : optuna.trial.FrozenTrial
+            The trial that just finished.
+
+        Returns
+        -------
+        None
+            Prints e.g. "A2 | Trial 7/50 | val MSE: 0.012345 | 6s | Params: {...}".
+
+        Notes
+        -----
+        A callback only reads the finished trial, so it never changes what
+        the seeded sampler draws next.
+        """
+        n_trials = config["n_trials"]
+        done = trial.number + 1
+        if should_report(done, n_trials) and trial.value is not None:
+            seconds = trial.duration.total_seconds() if trial.duration else 0.0
+            print(
+                format_progress(
+                    model_name,
+                    "Trial",
+                    done,
+                    n_trials,
+                    metric_name,
+                    trial.value,
+                    seconds,
+                    trial.params,
+                )
+            )
+
     sampler = optuna.samplers.TPESampler(seed=config["sampler_seed"])
     study = optuna.create_study(direction="minimize", sampler=sampler)
-    study.optimize(objective, n_trials=config["n_trials"])
+    study.optimize(objective, n_trials=config["n_trials"], callbacks=[report_trial])
     return dict(study.best_params), trials
 
 
@@ -364,7 +412,8 @@ def main(libraries: list[str] | None = None) -> None:
     -----
     Processing:
     1. Load the tuning config and the benchmark config (training settings).
-    2. Check the requested libraries, and silence Optuna's per-trial log.
+    2. Check the requested libraries, silence Optuna's per-trial log, and
+       send its remaining warnings through the root logger.
     3. For each library, tune and evaluate, then save both files. The tuned
        results are saved as library "<library>_tuned", so the comparison
        report picks them up next to the untuned results.
@@ -377,8 +426,13 @@ def main(libraries: list[str] | None = None) -> None:
         raise ValueError(f"Libraries not in the tuning config: {unknown}")
 
     optuna.logging.set_verbosity(optuna.logging.WARNING)
+    # Optuna's own handler stamps its lines ("[W 2026-...]"); through the root
+    # logger they get the run log's single timestamp instead.
+    optuna.logging.disable_default_handler()
+    optuna.logging.enable_propagation()
     print(f"Run stamp: {RUN_STAMP}")
     for library in libraries:
+        begin_phase(f"Tune {library}")
         training = benchmark_config[library].get("training", {})
         evaluations, trials = tune_library(library, config, training)
         save_results(f"{library}_tuned", evaluations)
@@ -388,6 +442,8 @@ def main(libraries: list[str] | None = None) -> None:
 # Running this module tunes the libraries named on the command line (or all
 # of them) and prints the total wall-clock time.
 if __name__ == "__main__":
+    start_run_log("-".join(["tune", *sys.argv[1:]]))
     start_time = time.perf_counter()
     main(sys.argv[1:] or None)
     print(f"\nTotal execution time: {time.perf_counter() - start_time:.2f} seconds")
+    finish_run()

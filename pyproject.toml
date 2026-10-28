@@ -88,6 +88,11 @@ ignore = [
     "DTZ005",
 ]
 
+[tool.ruff.lint.per-file-ignores]
+# The run log's file and streams stay open for the whole process and are closed
+# by close_run_log() (at exit at the latest), so they can't be context managers.
+"nn_numpy/runlog.py" = ["SIM115"]
+
 [tool.ruff.lint.isort]
 known-first-party = ["nn_numpy"]
 force-sort-within-sections = true

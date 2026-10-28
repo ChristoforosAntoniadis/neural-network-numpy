@@ -31,6 +31,7 @@ from nn_numpy.config import (
     resolve_results_path,
     stamped_filename,
 )
+from nn_numpy.runlog import begin_phase, finish_run, start_run_log
 
 # Path where this script will write the analysis report. The run stamp is
 # inserted before the extension so earlier reports are never overwritten.
@@ -1982,6 +1983,8 @@ def main(results_path: str | None = None) -> None:
 # Running this module writes the analysis report for the newest (or the
 # given) results file and prints the total wall-clock time.
 if __name__ == "__main__":
+    start_run_log("analysis")
+    begin_phase("Write the analysis report")
     start_time = time.perf_counter()
     # Optional first argument: an explicit results JSON to analyse.
     main(sys.argv[1] if len(sys.argv) > 1 else None)
@@ -1989,3 +1992,4 @@ if __name__ == "__main__":
 
     elapsed = end_time - start_time
     print(f"\nTotal execution time: {elapsed:.2f} seconds")
+    finish_run()

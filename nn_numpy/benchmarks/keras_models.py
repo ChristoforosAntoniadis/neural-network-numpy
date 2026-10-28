@@ -34,7 +34,7 @@ os.environ.setdefault("TF_CPP_MIN_LOG_LEVEL", "3")
 import keras
 import tensorflow as tf
 
-from nn_numpy.benchmarks.data import load_problem_config, with_dropout
+from nn_numpy.benchmarks.data import load_problem_config, print_config_progress, with_dropout
 from nn_numpy.nn.metrics import (
     accuracy,
     binary_cross_entropy,
@@ -230,6 +230,7 @@ def run_model(
     seed: int,
     baseline: float,
     training: dict[str, Any] | None = None,
+    progress: bool = False,
 ) -> list[dict[str, Any]]:
     """
     Train and score every optimizer / learning-rate / batch-size combination
@@ -259,6 +260,10 @@ def run_model(
         "patience" (int), "min_delta" (float) and "start_from_epoch"
         (int)). None uses 100 epochs, patience 10, min_delta 1e-4,
         start_from_epoch 20.
+    progress : bool, default=False
+        Print one progress line per configuration (make benchmarks does);
+        tuning leaves it off, because each trial trains a single
+        configuration and prints its own line.
 
     Returns
     -------
@@ -297,7 +302,8 @@ def run_model(
     secondary_key = "test_accuracy" if problem_name == "classification" else "test_r2"
     records = []
 
-    for params in expand_grid(grid):
+    configs = expand_grid(grid)
+    for done, params in enumerate(configs, 1):
         layers = with_dropout(layer_configs, params.get("dropout"))
         model = build_network(layers, config["input_dimension"], seed)
         optimizer = build_optimizer(
@@ -356,6 +362,8 @@ def run_model(
                 "val_loss_history": val_losses,
             }
         )
+        if progress:
+            print_config_progress(records[-1], done, len(configs))
         keras.backend.clear_session()
 
     return records

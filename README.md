@@ -45,7 +45,7 @@ When all 9 architectures are allowed, the selection changes for classification. 
 
 The typical run is strong too. Across seeds, the median A1 / A2 run removes 97.2% ± 1.6% of the baseline error on classification and 91.1% ± 0.9% on regression. The weaker runs are the failure modes described below.
 
-*A1* = 1 hidden layer (32 units, sigmoid). *A2* = 3 hidden layers (32 units each, ReLU). The other seven architectures are variants of these; see [Architectures](#architectures). Full per-run results are in [`main_summary_20261010-175120.csv`](reports/main_summary_20261010-175120.csv).
+*A1* = 1 hidden layer (32 units, sigmoid). *A2* = 3 hidden layers (32 units each, ReLU). The other seven architectures are variants of these; see [Architectures](#architectures). Full per-run results are in [`main_summary_20261028-135829.csv`](reports/main_summary_20261028-135829.csv).
 
 ### Key findings
 
@@ -62,17 +62,17 @@ The typical run is strong too. Across seeds, the median A1 / A2 run removes 97.2
 - **Dropout doesn't help here, because almost nothing overfits.** Of the 515 runs that early stopping ended, only 54 (10%) showed the overfitting signature, training loss still improving while validation loss wasn't; the rest stopped on a plateau, and 390 runs used all 100 epochs. The gap between test and training metric of the models selected per seed is tiny: at most 0.004 BCE on classification (averaged per architecture), and 0.16 MSE for A1 on regression, against a baseline of about 100. With no overfitting to correct, dropout only removes capacity. It wins only 30 of 120 matched classification comparisons and 12 of 110 regression ones.
 
 <p align="center">
-  <img src="reports/figures/comparisons/a2_variants_regression_momentum_lr01_bs64_20261010-182025.png" width="85%" alt="A2 and its variants on regression with momentum at LR 0.1: only the batch-norm and gradient-clipping variants learn">
+  <img src="reports/figures/comparisons/a2_variants_regression_momentum_lr01_bs64_20261028-141512.png" width="85%" alt="A2 and its variants on regression with momentum at LR 0.1: only the batch-norm and gradient-clipping variants learn">
 </p>
 <p align="center">
-  <img src="reports/figures/comparisons/optimizers_classification_A1_lr01_bs16_20261010-182025.png" width="85%" alt="Training and validation loss for SGD, Momentum and AdaBelief on banknote classification">
+  <img src="reports/figures/comparisons/optimizers_classification_A1_lr01_bs16_20261028-141512.png" width="85%" alt="Training and validation loss for SGD, Momentum and AdaBelief on banknote classification">
 </p>
 <p align="center">
-  <img src="reports/figures/comparisons/depth_classification_sgd_lr01_bs16_20261010-182025.png" width="48%" alt="Depth comparison: A1 vs A2">
-  <img src="reports/figures/comparisons/learning_rate_classification_A1_sgd_bs16_20261010-182025.png" width="48%" alt="Learning-rate comparison: 0.1 vs 0.001">
+  <img src="reports/figures/comparisons/depth_classification_sgd_lr01_bs16_20261028-141512.png" width="48%" alt="Depth comparison: A1 vs A2">
+  <img src="reports/figures/comparisons/learning_rate_classification_A1_sgd_bs16_20261028-141512.png" width="48%" alt="Learning-rate comparison: 0.1 vs 0.001">
 </p>
 
-The plots show seed 42. More plots, including the dropout comparison, EDA, scaling comparisons and correlation heatmaps, are in [`reports/`](reports/). The written analysis, including all multi-seed tables, is in [`analysis_20261010-182043.txt`](reports/analysis_20261010-182043.txt).
+The plots show seed 42. More plots, including the dropout comparison, EDA, scaling comparisons and correlation heatmaps, are in [`reports/`](reports/). The written analysis, including all multi-seed tables, is in [`analysis_20261028-141525.txt`](reports/analysis_20261028-141525.txt).
 
 ### Architectures
 
@@ -146,17 +146,17 @@ Each cell is the best configuration per seed (selected on validation), mean ± s
 - **The frameworks are slower on data this small.** A selected model takes 0.4–0.5 s to train in the NumPy network, 0.9–7.3 s in PyTorch, and 4–9 s in Keras. With a few hundred training samples, each step is tiny, and per-step framework overhead dominates; Keras's `fit()` adds the most. The 640 runs took 27 minutes in PyTorch and 98 in Keras on one CPU; the NumPy network's 1,440 runs take about 16.
 
 <p align="center">
-  <img src="reports/figures/benchmarks/benchmark_classification_20261012-111324.png" width="48%" alt="Classification test BCE: NumPy network vs. scikit-learn, Keras and PyTorch models">
-  <img src="reports/figures/benchmarks/benchmark_regression_20261012-111324.png" width="48%" alt="Regression test MSE: NumPy network vs. scikit-learn, Keras and PyTorch models">
+  <img src="reports/figures/benchmarks/benchmark_classification_20261028-175637.png" width="48%" alt="Classification test BCE: NumPy network vs. scikit-learn, Keras and PyTorch models">
+  <img src="reports/figures/benchmarks/benchmark_regression_20261028-175637.png" width="48%" alt="Regression test MSE: NumPy network vs. scikit-learn, Keras and PyTorch models">
 </p>
 <p align="center">
-  <img src="reports/figures/benchmarks/benchmark_curves_tensorflow_20261012-111324.png" width="85%" alt="Validation loss of the selected NumPy and Keras models, seed 42">
+  <img src="reports/figures/benchmarks/benchmark_curves_tensorflow_20261028-175637.png" width="85%" alt="Validation loss of the selected NumPy and Keras models, seed 42">
 </p>
 <p align="center">
-  <img src="reports/figures/benchmarks/benchmark_curves_pytorch_20261012-111324.png" width="85%" alt="Validation loss of the selected NumPy and PyTorch models, seed 42">
+  <img src="reports/figures/benchmarks/benchmark_curves_pytorch_20261028-175637.png" width="85%" alt="Validation loss of the selected NumPy and PyTorch models, seed 42">
 </p>
 
-The bar charts include every library model and each framework architecture. The curves show the selected NumPy, framework and tuned framework models on seed 42. The full tables, the configuration each model selected most often and the seed-by-seed head-to-heads are in [`benchmark_report_20261012-111324.txt`](reports/benchmark_report_20261012-111324.txt).
+The bar charts include every library model and each framework architecture. The curves show the selected NumPy, framework and tuned framework models on seed 42. The full tables, the configuration each model selected most often and the seed-by-seed head-to-heads are in [`benchmark_report_20261028-175637.txt`](reports/benchmark_report_20261028-175637.txt).
 
 ### Tuned frameworks (Optuna)
 
@@ -249,7 +249,7 @@ python -m nn_numpy.benchmarks.report
 
 For a quicker run, set `"seeds": [42]` in both files in `configs/`. That runs the 288 experiments of a single seed in about 3 minutes, and seed 42 reproduces the single-seed results exactly.
 
-Every output file is stamped with the time of the run, as `name_YYYYMMDD-HHMMSS.ext`, so a new run never overwrites an earlier one. `nn_numpy.comparisons` and `nn_numpy.analysis` use the newest `reports/main_results_full_*.json` by default; pass a path as the first argument to pick a specific one, e.g. `python -m nn_numpy.analysis reports/main_results_full_20261010-175120.json`. When run directly (not through `make plots`), set `MPLBACKEND=Agg` to stop plot windows from opening.
+Every output file is stamped with the time of the run, as `name_YYYYMMDD-HHMMSS.ext`, so a new run never overwrites an earlier one. `nn_numpy.comparisons` and `nn_numpy.analysis` use the newest `reports/main_results_full_*.json` by default; pass a path as the first argument to pick a specific one, e.g. `python -m nn_numpy.analysis reports/main_results_full_20261028-135829.json`. When run directly (not through `make plots`), set `MPLBACKEND=Agg` to stop plot windows from opening.
 
 Older runs stay on your disk, but only the newest version of each output is committed. Stamped outputs are git-ignored, and a pre-commit hook ([`tools/stage_latest_outputs.py`](tools/stage_latest_outputs.py)) stages the newest ones, untracks older ones, and updates the stamped links in this README. Enable it once per clone with `git config core.hooksPath .githooks`.
 
@@ -273,6 +273,7 @@ neural-network-numpy/
 │   ├── extensions.owl           # imports the knowledge base; put manual additions here
 │   ├── nn-architecture.canvas   # visual representation of the repository, not a knowledge base
 │   └── nn-architecture.png      # the canvas as an image, shown in this README
+├── logs/                        # timestamped run logs of the make targets (git-ignored)
 ├── models/                      # (empty) trained and serialized models
 ├── notebooks/                   # (empty) Jupyter notebooks
 ├── references/                  # (empty) data dictionaries, manuals, papers

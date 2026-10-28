@@ -47,6 +47,7 @@ The same quantity is used for training and for evaluation, so the reported metri
 | `nn_numpy/scalers.py` | Custom standard scaler, (x − μ) / σ | – | – |
 | `nn_numpy/plots.py` | Exploratory and preprocessing plots used by `features.py` | – | – |
 | `nn_numpy/config_loader.py` | Loads and validates the JSON experiment configs | `configs/*.json` | – |
+| `nn_numpy/runlog.py` | Timestamped run logs, phase timings and progress lines for the long-running entry points; see [Run logs](#run-logs) | – | `logs/run_<YYYYmmdd_HHMMSS>_<mode>.log` |
 | `nn_numpy/nn/layers.py` | Dense layer, Z = X·W (+ b), with its backward pass; optional bias and `normal` / `he` / `xavier` weight initialization. BatchNorm layer with learned scale and shift, running statistics, and a training / evaluation mode. Inverted Dropout layer | – | – |
 | `nn_numpy/nn/activations.py` | ReLU, Sigmoid, Tanh, Linear (forward and backward) | – | – |
 | `nn_numpy/nn/network.py` | Builds the network from a config; full forward and backward passes | – | – |
@@ -74,6 +75,22 @@ Only the newest version of each output is committed. `.gitignore` ignores all st
 - rewrites stamped output names in `README.md` and `docs/DETAILS.md` to the newest stamps, and stops the commit if either file has unstaged edits, so those edits are never committed by accident
 
 Each output is handled on its own, so the newest analysis report may come from a different run than the newest plots. Enable the hook once per clone with `git config core.hooksPath .githooks`. It runs with `.venv`'s Python if present, otherwise `python`.
+
+#### Run logs
+
+`make train`, `make benchmarks`, `make tune`, `make plots`, `make analysis` and `make benchmark-report` each write a log to `logs/run_<YYYYmmdd_HHMMSS>_<mode>.log` (`nn_numpy/runlog.py`). The log is a tee on the process's stdout and stderr: every line (prints, logger lines, Python warnings, tracebacks, and the TensorFlow and PyTorch backends' output) is prefixed with `YYYY-MM-DD HH:MM:SS | `, shown on the terminal and appended to the file. Logger lines carry no timestamp of their own, so each line has exactly one.
+
+Each run is split into phases (for example `Train classification`, `Train regression` and `Save results` in `make train`, or one phase per library in `make benchmarks` and `make tune`). Each phase is logged with its duration, and the log ends with a table of the phases' seconds and share of the run.
+
+The long loops print one progress line per unit of work, for example:
+
+```text
+A2 | Run 87/1440 | val MSE: 0.512345 | 1s | Params: {'problem': 'regression', 'optimizer': 'adabelief', 'lr': 0.1, 'batch': 16, 'seed': 42}
+A2 | Config 3/16 | val MSE: 0.412345 | 9s | Params: {'optimizer': 'adam', 'learning_rate': 0.001, 'batch_size': 16}
+A2 | Trial 7/50 | val MSE: 0.312345 | 6s | Params: {'optimizer': 'muon', 'learning_rate': 0.02, ...}
+```
+
+A loop prints at most about 50 lines: every item when it has up to 50 (a framework's configurations, a study's trials) and every `ceil(n / 50)`-th item otherwise (every 29th of the 1,440 NumPy runs). No single fit takes longer than about 10 seconds, so there are no per-epoch lines. Logs differ per computer and run, so `logs/` is git-ignored.
 
 ### Dependencies
 
@@ -112,7 +129,7 @@ make analysis       # python -m nn_numpy.analysis
 make all
 ```
 
-Steps 2 and 3 read the newest `reports/main_results_full_*.json` and fail if none exists. To analyse a specific run instead, pass its path as the first argument, e.g. `python -m nn_numpy.analysis reports/main_results_full_20261010-175120.json`. The repository already includes a results file, so you can run them immediately. `make plots` sets `MPLBACKEND=Agg` so no plot windows open; set it yourself when running the Python command directly.
+Steps 2 and 3 read the newest `reports/main_results_full_*.json` and fail if none exists. To analyse a specific run instead, pass its path as the first argument, e.g. `python -m nn_numpy.analysis reports/main_results_full_20261028-135829.json`. The repository already includes a results file, so you can run them immediately. `make plots` sets `MPLBACKEND=Agg` so no plot windows open; set it yourself when running the Python command directly.
 
 `make` is not installed on Windows by default: install it with `winget install ezwinports.make` and open a new terminal.
 

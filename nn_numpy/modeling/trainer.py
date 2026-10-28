@@ -694,7 +694,9 @@ class Trainer:
 
         return self.history
 
-    def evaluate(self, X_test: np.ndarray, y_test: np.ndarray) -> dict[str, float]:
+    def evaluate(
+        self, X_test: np.ndarray, y_test: np.ndarray, verbose: bool = True
+    ) -> dict[str, float]:
         """
         Evaluate the trained model on the test set and print the result.
 
@@ -705,6 +707,9 @@ class Trainer:
         y_test : numpy.ndarray of shape (n_test, 1)
             True test targets (int64 0/1 labels for classification, float64
             values for regression).
+        verbose : bool, default=True
+            Whether to print the result. The experiment grid passes False:
+            1,440 runs would add three lines each to the run log.
 
         Returns
         -------
@@ -720,7 +725,7 @@ class Trainer:
            test set in one forward pass.
         2. Compute the loss with `self.loss_fn` and the metric with
            `_compute_metric`.
-        3. Print both values and return them.
+        3. Print both values if verbose, and return them.
 
         The metric depends on the task:
         - classification -> BCE
@@ -734,13 +739,14 @@ class Trainer:
         test_loss = self.loss_fn.forward(y_test, y_test_pred)
         test_metric = self._compute_metric(y_test, y_test_pred)
 
-        print("\n--- Test Set Evaluation ---")
-        print(f"Test Loss: {test_loss:.6f}")
+        if verbose:
+            print("\n--- Test Set Evaluation ---")
+            print(f"Test Loss: {test_loss:.6f}")
 
-        if self.task_type == "classification":
-            print(f"Test BCE: {test_metric:.6f}")
-        else:
-            print(f"Test MSE: {test_metric:.6f}")
+            if self.task_type == "classification":
+                print(f"Test BCE: {test_metric:.6f}")
+            else:
+                print(f"Test MSE: {test_metric:.6f}")
 
         return {"test_loss": test_loss, "test_metric": test_metric}
 

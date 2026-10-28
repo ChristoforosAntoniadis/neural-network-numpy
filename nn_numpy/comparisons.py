@@ -30,9 +30,6 @@ from matplotlib.figure import Figure
 import matplotlib.pyplot as plt
 import numpy as np
 
-# COMPARISONS_FIGURES_DIR / COMPARISONS_TEXT_DIR are the output folders.
-# RUN_STAMP / stamped_filename give every output file a unique name, and
-# resolve_results_path finds the results JSON produced by the experiment sweep.
 from nn_numpy.config import (
     COMPARISONS_FIGURES_DIR,
     COMPARISONS_TEXT_DIR,
@@ -41,6 +38,11 @@ from nn_numpy.config import (
     resolve_results_path,
     stamped_filename,
 )
+
+# COMPARISONS_FIGURES_DIR / COMPARISONS_TEXT_DIR are the output folders.
+# RUN_STAMP / stamped_filename give every output file a unique name, and
+# resolve_results_path finds the results JSON produced by the experiment sweep.
+from nn_numpy.runlog import begin_phase, finish_run, start_run_log
 
 # Folder where the comparison plots are saved (reports/figures/comparisons/).
 PLOTS_DIR = COMPARISONS_FIGURES_DIR
@@ -1776,6 +1778,8 @@ def main(results_path: str | None = None) -> None:
 # a results JSON (the newest one unless a path is given) and prints the
 # total run time.
 if __name__ == "__main__":
+    start_run_log("plots")
+    begin_phase("Draw the comparison figures")
     start_time = time.perf_counter()
     # Optional first argument: an explicit results JSON to plot from.
     main(sys.argv[1] if len(sys.argv) > 1 else None)
@@ -1783,3 +1787,4 @@ if __name__ == "__main__":
 
     elapsed = end_time - start_time
     print(f"\nTotal execution time: {elapsed:.2f} seconds")
+    finish_run()

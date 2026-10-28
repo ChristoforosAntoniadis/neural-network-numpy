@@ -28,6 +28,7 @@ from sklearn.model_selection import ParameterGrid
 from sklearn.neural_network import MLPClassifier, MLPRegressor
 from sklearn.svm import SVC, SVR
 
+from nn_numpy.benchmarks.data import print_config_progress
 from nn_numpy.nn.metrics import (
     accuracy,
     binary_cross_entropy,
@@ -182,6 +183,7 @@ def run_model(
     splits: tuple[np.ndarray, ...],
     seed: int,
     baseline: float,
+    progress: bool = False,
 ) -> list[dict[str, Any]]:
     """
     Train and score every configuration of one model on one seed's split.
@@ -202,6 +204,10 @@ def run_model(
     baseline : float
         The split's constant-prediction test metric, stored with each
         record.
+    progress : bool, default=False
+        Print one progress line per configuration (make benchmarks does);
+        tuning leaves it off, because each trial trains a single
+        configuration and prints its own line.
 
     Returns
     -------
@@ -227,7 +233,8 @@ def run_model(
     secondary_key = "test_accuracy" if problem_name == "classification" else "test_r2"
     records = []
 
-    for params in expand_grid(grid):
+    configs = expand_grid(grid)
+    for done, params in enumerate(configs, 1):
         model = build_model(problem_name, model_name, params, seed)
 
         # Record (rather than print) convergence warnings, e.g. from MLPs
@@ -260,5 +267,7 @@ def run_model(
                 "converged": converged,
             }
         )
+        if progress:
+            print_config_progress(records[-1], done, len(configs))
 
     return records

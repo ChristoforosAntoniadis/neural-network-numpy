@@ -10,6 +10,10 @@ venv/
 .vscode/
 .ruff_cache/
 .mypy_cache/
+
+# Run logs (nn_numpy.runlog) differ per computer and run; they are never committed.
+logs/
+
 *.egg-info/
 build/
 

@@ -20,6 +20,7 @@ from typing import Any
 
 from nn_numpy.benchmarks.data import load_splits, problem_seeds
 from nn_numpy.config import REPORT_DIR, ROOT_DIR, RUN_STAMP, stamped_filename
+from nn_numpy.runlog import begin_phase, finish_run, start_run_log
 
 # Location of the benchmark configuration.
 BENCHMARK_CONFIG_PATH = os.path.join(ROOT_DIR, "configs", "benchmark_experiments.json")
@@ -133,11 +134,14 @@ def run_library(library: str, library_config: dict[str, Any]) -> list[dict[str, 
     2. For each problem and each of its seeds, load the split and its
        constant-prediction baseline once, and run every model's full grid
        on it.
-    3. Print a one-line progress message per model (flushed at once).
+    3. Print a progress line per configuration as it finishes (the
+       run_model progress option), and a one-line summary per model
+       (flushed at once).
     """
     run_model = get_runner(library)
     records = []
-    options = {}
+    # Every library prints one progress line per configuration as it finishes.
+    options: dict[str, Any] = {"progress": True}
     if "architectures" in library_config:
         options["training"] = library_config.get("training", {})
 
@@ -219,7 +223,8 @@ def main(libraries: list[str] | None = None) -> None:
     Processing:
     1. Load the benchmark config.
     2. Check the requested libraries exist in it.
-    3. For each library, train everything and save the results.
+    3. For each library, as its own run-log phase, train everything and
+       save the results.
     """
     config = load_benchmark_config()
     libraries = libraries or list(config)
@@ -229,12 +234,15 @@ def main(libraries: list[str] | None = None) -> None:
 
     print(f"Run stamp: {RUN_STAMP}")
     for library in libraries:
+        begin_phase(f"Train {library}")
         save_results(library, run_library(library, config[library]))
 
 
 # Running this module trains the library models (all libraries, or those
 # named on the command line) and saves the results, then prints the time.
 if __name__ == "__main__":
+    start_run_log("-".join(["benchmarks", *sys.argv[1:]]))
     start_time = time.perf_counter()
     main(sys.argv[1:] or None)
     print(f"\nTotal execution time: {time.perf_counter() - start_time:.2f} seconds")
+    finish_run()

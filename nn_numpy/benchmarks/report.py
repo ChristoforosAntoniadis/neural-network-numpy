@@ -39,6 +39,7 @@ from nn_numpy.config import (
     resolve_results_path,
     stamped_filename,
 )
+from nn_numpy.runlog import begin_phase, finish_run, start_run_log
 
 # Libraries whose results the report looks for, in display order. The
 # "_tuned" entries are the Optuna-tuned framework models
@@ -978,6 +979,9 @@ def main(numpy_results_path: str | None = None) -> None:
 # newest results (optionally a specific NumPy results file given as the
 # first argument).
 if __name__ == "__main__":
+    start_run_log("benchmark-report")
+    begin_phase("Write the comparison report and figures")
     start_time = time.perf_counter()
     main(sys.argv[1] if len(sys.argv) > 1 else None)
     print(f"\nTotal execution time: {time.perf_counter() - start_time:.2f} seconds")
+    finish_run()

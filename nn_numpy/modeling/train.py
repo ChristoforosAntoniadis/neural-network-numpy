@@ -37,6 +37,13 @@ from nn_numpy.nn.metrics import (
 )
 from nn_numpy.nn.network import NeuralNetwork
 from nn_numpy.nn.optimizers import get_optimizer
+from nn_numpy.runlog import (
+    begin_phase,
+    finish_run,
+    format_progress,
+    should_report,
+    start_run_log,
+)
 
 # Toggle this to True if you want features.py to generate EDA plots.
 # Leaving it False makes the full experiment sweep faster and quieter.
@@ -247,31 +254,22 @@ def run_single_experiment(
     Notes
     -----
     Processing:
-    1. Print a header describing the run.
-    2. Check that the data's feature count matches the config.
-    3. Build the network for the chosen architecture, seeded with `seed`.
-    4. Create the loss function, optimizer and Trainer (with the config's
+    1. Check that the data's feature count matches the config.
+    2. Build the network for the chosen architecture, seeded with `seed`.
+    3. Create the loss function, optimizer and Trainer (with the config's
        early-stopping settings and the architecture's gradient-norm cap, if
        it has one in "architecture_options").
-    5. Train with Trainer.fit on the training set, validating on the
+    4. Train with Trainer.fit on the training set, validating on the
        validation set each epoch.
-    6. Evaluate on the test set, and score the training set in evaluation
-       mode (no dropout) for the generalization gap.
-    7. Compute test accuracy (classification) or test R² (regression), and
+    5. Evaluate on the test set (silently), and score the training set in
+       evaluation mode (no dropout) for the generalization gap.
+    6. Compute test accuracy (classification) or test R² (regression), and
        record the training time.
-    8. Collect settings, results and histories into one dictionary.
-    """
-    print("\n" + "=" * 70)
-    print(
-        f"Running: problem={problem_name} | "
-        f"architecture={architecture_name} | "
-        f"optimizer={optimizer_name} | "
-        f"lr={learning_rate} | "
-        f"batch={batch_size} | "
-        f"seed={seed}"
-    )
-    print("=" * 70)
+    7. Collect settings, results and histories into one dictionary.
 
+    It prints nothing: main() prints one progress line per reported run,
+    which keeps the 1,440-run log readable.
+    """
     # Unpack the dataset splits for this problem
     X_train, y_train, X_val, y_val, X_test, y_test = dataset_splits
 
@@ -328,7 +326,7 @@ def run_single_experiment(
     train_seconds = time.perf_counter() - fit_start
 
     # Evaluate on the held-out test set
-    results = trainer.evaluate(X_test, y_test)
+    results = trainer.evaluate(X_test, y_test, verbose=False)
 
     # Same metric on the training set, in evaluation mode, for the
     # generalization gap (test - train). The training loss recorded during
@@ -569,6 +567,8 @@ def main() -> None:
     # Every file written by this run carries this stamp in its name.
     print(f"Run stamp: {RUN_STAMP}")
 
+    begin_phase("Load data and configs")
+
     # Ensure all required datasets are available locally
     fetch = Fetch()
     fetch.download_all()
@@ -606,6 +606,8 @@ def main() -> None:
     # - learning rate
     # - batch size
     for problem_name, config in experiment_configs.items():
+        begin_phase(f"Train {problem_name}")
+        metric_name = "val BCE" if problem_name == "classification" else "val MSE"
         seeds = get_seeds(config)
         preprocessing = config["preprocessing"]
 
@@ -631,7 +633,7 @@ def main() -> None:
                     for learning_rate in config["experiments"]["learning_rates"]:
                         for batch_size in config["experiments"]["batch_sizes"]:
                             run_counter += 1
-                            print(f"\nStarting run {run_counter}/{total_runs}...")
+                            run_start = time.perf_counter()
 
                             result = run_single_experiment(
                                 problem_name=problem_name,
@@ -647,6 +649,29 @@ def main() -> None:
 
                             all_results.append(result)
 
+                            # Bounded: about MAX_PROGRESS_LINES lines over all runs.
+                            if should_report(run_counter, total_runs):
+                                print(
+                                    format_progress(
+                                        architecture_name,
+                                        "Run",
+                                        run_counter,
+                                        total_runs,
+                                        metric_name,
+                                        result["best_val_loss"],
+                                        time.perf_counter() - run_start,
+                                        {
+                                            "problem": problem_name,
+                                            "optimizer": optimizer_name,
+                                            "lr": learning_rate,
+                                            "batch": batch_size,
+                                            "seed": seed,
+                                        },
+                                    )
+                                )
+
+    begin_phase("Save results")
+
     # Print a compact console summary
     print_summary_table(all_results)
 
@@ -660,9 +685,11 @@ def main() -> None:
 # Running this file runs the whole experiment sweep, saves the results to
 # reports/, and prints the total wall-clock time.
 if __name__ == "__main__":
+    start_run_log("train")
     start_time = time.perf_counter()
     main()
     end_time = time.perf_counter()
 
     elapsed = end_time - start_time
     print(f"\nTotal execution time: {elapsed:.2f} seconds")
+    finish_run()

@@ -42,6 +42,10 @@ COMPARISONS_FIGURES_DIR = os.path.join(FIGURES_DIR, "comparisons")
 PREPROCESSING_GRAPHS_DIR = os.path.join(FIGURES_DIR, "eda")
 BENCHMARK_FIGURES_DIR = os.path.join(FIGURES_DIR, "benchmarks")
 
+# logs/: the timestamped run logs of the long-running entry points (nn_numpy.runlog).
+# They differ per computer and run, so they are git-ignored and never committed.
+LOG_DIR = os.path.join(ROOT_DIR, "logs")
+
 # Global Configurations
 # Default seed for the data split, weight initialization, dropout masks and
 # shuffling, used whenever a config or results file does not give one.
