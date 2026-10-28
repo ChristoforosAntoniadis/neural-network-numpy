@@ -4,11 +4,11 @@
   xmlns:rdfs="http://www.w3.org/2000/01/rdf-schema#"
   xmlns:owl="http://www.w3.org/2002/07/owl#"
   xmlns:xsd="http://www.w3.org/2001/XMLSchema#"
-  xmlns:nnfs="https://github.com/WarmupHero/neural-network-numpy/ontology#"
+  xmlns:nnfs="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology#"
 >
-  <owl:Ontology rdf:about="https://github.com/WarmupHero/neural-network-numpy/ontology/extensions">
+  <owl:Ontology rdf:about="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology/extensions">
     <rdfs:label>neural-network-numpy knowledge base: extensions</rdfs:label>
     <rdfs:comment>Manual additions to the generated knowledge base. Open this file in Protégé (it imports nn_numpy.owl from the same folder) and add classes, individuals or axioms here; regenerating the knowledge base never touches this file.</rdfs:comment>
-    <owl:imports rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology"/>
+    <owl:imports rdf:resource="https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology"/>
   </owl:Ontology>
 </rdf:RDF>

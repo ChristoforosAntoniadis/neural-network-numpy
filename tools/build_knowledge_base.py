@@ -43,7 +43,7 @@ EXTENSIONS = ROOT / "knowledge" / "extensions.owl"
 CANVAS = ROOT / "knowledge" / "nn-architecture.canvas"
 
 # Ontology IRIs. The namespace of every entity is the ontology IRI plus "#".
-ONTOLOGY_IRI = "https://github.com/WarmupHero/neural-network-numpy/ontology"
+ONTOLOGY_IRI = "https://github.com/ChristoforosAntoniadis/neural-network-numpy/ontology"
 EXTENSIONS_IRI = ONTOLOGY_IRI + "/extensions"
 NNFS = Namespace(ONTOLOGY_IRI + "#")
 

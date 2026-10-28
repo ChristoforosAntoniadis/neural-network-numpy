@@ -9,7 +9,7 @@ Each task is benchmarked across a grid of 9 architectures × 4 optimizers × 2 l
 
 ![Python](https://img.shields.io/badge/python-3.12-blue)
 ![NumPy only](https://img.shields.io/badge/built%20with-NumPy%20only-informational)
-[![tests](https://github.com/WarmupHero/neural-network-numpy/actions/workflows/tests.yml/badge.svg)](https://github.com/WarmupHero/neural-network-numpy/actions/workflows/tests.yml)
+[![tests](https://github.com/ChristoforosAntoniadis/neural-network-numpy/actions/workflows/tests.yml/badge.svg)](https://github.com/ChristoforosAntoniadis/neural-network-numpy/actions/workflows/tests.yml)
 ![License: MIT](https://img.shields.io/badge/license-MIT-green)
 
 ---
