@@ -24,6 +24,8 @@ import subprocess
 import sys
 
 # Make "src" importable when this file is run as a script.
+# (The package is nn_numpy: adding the repository root to sys.path lets the
+# import below work when the hook runs this file directly, not as a module.)
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 sys.path.insert(0, ROOT_DIR)
 
@@ -155,7 +157,22 @@ def update_doc_references(newest_by_name: dict[str, str]) -> list[str]:
     """
 
     def replace(match: re.Match[str]) -> str:
-        """Return the newest stamped name for one matched stamped name."""
+        """
+        Return the newest stamped name for one matched stamped name.
+
+        Parameters
+        ----------
+        match : re.Match of str
+            A STAMPED_NAME_PATTERN match: group 1 the name, group 2 the
+            stamp, group 3 the extension.
+
+        Returns
+        -------
+        str
+            The newest stamped file name for the same output, or the
+            matched text unchanged if the output has no newest version
+            (e.g. a name in prose that is not a file in reports/).
+        """
         # Rebuild the un-stamped name: group 1 is the name, group 3 the extension.
         name = match.group(1) + match.group(3)
         return newest_by_name.get(name, match.group(0))

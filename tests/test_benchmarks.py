@@ -7,6 +7,7 @@ optional dependency), so the core test suite runs without it.
 """
 
 import math
+from typing import Any
 
 import numpy as np
 import pytest
@@ -21,7 +22,7 @@ from nn_numpy.modeling.train import PREPROCESSORS, constant_prediction_baseline
 
 
 @pytest.mark.parametrize("problem_name", ["classification", "regression"])
-def test_benchmark_splits_match_the_main_pipeline(problem_name):
+def test_benchmark_splits_match_the_main_pipeline(problem_name: str) -> None:
     """
     load_splits returns exactly the main pipeline's split for a seed.
 
@@ -48,7 +49,7 @@ def test_benchmark_splits_match_the_main_pipeline(problem_name):
 # ------------------------------------------------------------------
 
 
-def run(seed, val, test, baseline=1.0, **extra):
+def run(seed: int, val: float, test: float, baseline: float = 1.0, **extra: Any) -> dict[str, Any]:
     """
     Build a minimal library-style result record for the report tests.
 
@@ -62,7 +63,7 @@ def run(seed, val, test, baseline=1.0, **extra):
         Test metric.
     baseline : float, default=1.0
         Constant-prediction test metric.
-    **extra
+    **extra : Any
         Any other fields, e.g. model="svm".
 
     Returns
@@ -86,7 +87,7 @@ def run(seed, val, test, baseline=1.0, **extra):
     }
 
 
-def test_selection_uses_validation_not_test():
+def test_selection_uses_validation_not_test() -> None:
     """
     select_per_seed picks the lowest validation metric on each seed.
 
@@ -106,7 +107,7 @@ def test_selection_uses_validation_not_test():
     assert [r["test_metric"] for r in selected] == [0.50, 0.30]
 
 
-def test_summarize_computes_error_removed_and_most_common_config():
+def test_summarize_computes_error_removed_and_most_common_config() -> None:
     """
     summarize reports error removed and the most frequently chosen configuration.
 
@@ -114,6 +115,8 @@ def test_summarize_computes_error_removed_and_most_common_config():
     -----
     With baseline 2.0 and test metrics 0.5 and 1.0, error removed is 0.75
     and 0.5. Both runs share one configuration, chosen on 2 of 2 seeds.
+    Error removed = 1 - test / baseline: 1 - 0.5 / 2 = 0.75 and
+    1 - 1.0 / 2 = 0.5.
     """
     selected = [
         run(1, 0.1, 0.5, baseline=2.0, params={"C": 1}),
@@ -124,13 +127,15 @@ def test_summarize_computes_error_removed_and_most_common_config():
     assert summary["config"] == "C=1 (2/2 seeds)"
 
 
-def test_mean_pm_std_ignores_missing_values():
+def test_mean_pm_std_ignores_missing_values() -> None:
     """
     mean_pm_std skips None values, e.g. metrics missing from older files.
 
     Notes
     -----
     [1, None, 3] -> mean 2, sample std ~1.414.
+    Without the None: mean (1 + 3) / 2 = 2; sample std
+    sqrt(((1 - 2)^2 + (3 - 2)^2) / (2 - 1)) = sqrt(2) = 1.41.
     """
     assert report.mean_pm_std([1.0, None, 3.0], 2) == "2.00 ± 1.41"
     assert report.mean_pm_std([None], 2) == "-"
@@ -141,7 +146,9 @@ def test_mean_pm_std_ignores_missing_values():
 # ------------------------------------------------------------------
 
 
-def make_splits(problem_name, n=120, seed=0, n_features=3):
+def make_splits(
+    problem_name: str, n: int = 120, seed: int = 0, n_features: int = 3
+) -> tuple[np.ndarray, ...]:
     """
     Build small synthetic train / validation / test splits.
 
@@ -162,6 +169,7 @@ def make_splits(problem_name, n=120, seed=0, n_features=3):
     tuple of numpy.ndarray
         (X_train, y_train, X_val, y_val, X_test, y_test), with n_features
         features and y arrays of shape (n_part, 1), like the real pipeline.
+        X is float64; y is int64 (classification) or float64 (regression).
 
     Notes
     -----
@@ -180,7 +188,7 @@ def make_splits(problem_name, n=120, seed=0, n_features=3):
     return X[:a], y[:a], X[a:b], y[a:b], X[b:], y[b:]
 
 
-def test_expand_grid_handles_lists_of_grids_and_tuples():
+def test_expand_grid_handles_lists_of_grids_and_tuples() -> None:
     """
     expand_grid forms every combination and turns JSON lists into tuples.
 
@@ -192,7 +200,7 @@ def test_expand_grid_handles_lists_of_grids_and_tuples():
     pytest.importorskip("sklearn")
     from nn_numpy.benchmarks.sklearn_models import expand_grid
 
-    grid = [
+    grid: list[dict[str, list[Any]]] = [
         {"hidden_layer_sizes": [[32]], "alpha": [0.1, 1.0]},
         {"hidden_layer_sizes": [[32, 32]]},
     ]
@@ -210,7 +218,9 @@ def test_expand_grid_handles_lists_of_grids_and_tuples():
         ("regression", "gradient_boosting", {"max_iter": [50]}),
     ],
 )
-def test_run_model_returns_one_scored_record_per_config(problem_name, model_name, grid):
+def test_run_model_returns_one_scored_record_per_config(
+    problem_name: str, model_name: str, grid: dict[str, list[Any]]
+) -> None:
     """
     run_model trains every configuration and records its metrics.
 
@@ -244,7 +254,7 @@ def test_run_model_returns_one_scored_record_per_config(problem_name, model_name
         assert record[secondary] > 0.6
 
 
-def test_runs_are_reproducible_with_the_same_seed():
+def test_runs_are_reproducible_with_the_same_seed() -> None:
     """
     Seeded models give identical results when run twice.
 
@@ -262,7 +272,7 @@ def test_runs_are_reproducible_with_the_same_seed():
     assert first[0]["test_metric"] == second[0]["test_metric"]
 
 
-def test_unknown_model_name_raises():
+def test_unknown_model_name_raises() -> None:
     """
     build_model rejects a model name that isn't defined for the problem.
 
@@ -285,7 +295,7 @@ def test_unknown_model_name_raises():
 QUICK_TRAINING = {"epochs": 3, "early_stopping": {"patience": 2, "start_from_epoch": 0}}
 
 
-def test_keras_network_mirrors_the_architecture_config():
+def test_keras_network_mirrors_the_architecture_config() -> None:
     """
     build_network creates the same layer sequence as the NumPy architecture.
 
@@ -307,7 +317,7 @@ def test_keras_network_mirrors_the_architecture_config():
 
 
 @pytest.mark.parametrize("name", ["sgd", "momentum", "adam", "muon"])
-def test_keras_optimizers(name):
+def test_keras_optimizers(name: str) -> None:
     """
     build_optimizer returns the matching Keras optimizer.
 
@@ -333,7 +343,7 @@ def test_keras_optimizers(name):
 
 
 @pytest.mark.parametrize("problem_name, n_features", [("classification", 4), ("regression", 8)])
-def test_keras_run_model_records_every_combination(problem_name, n_features):
+def test_keras_run_model_records_every_combination(problem_name: str, n_features: int) -> None:
     """
     run_model trains each grid combination and records finite metrics.
 
@@ -354,7 +364,11 @@ def test_keras_run_model_records_every_combination(problem_name, n_features):
     from nn_numpy.benchmarks.keras_models import run_model
 
     splits = make_splits(problem_name, n_features=n_features)
-    grid = {"optimizer": ["adam"], "learning_rate": [0.01], "batch_size": [16, 32]}
+    grid: dict[str, list[Any]] = {
+        "optimizer": ["adam"],
+        "learning_rate": [0.01],
+        "batch_size": [16, 32],
+    }
     records = run_model(problem_name, "A1", grid, splits, 5, 0.5, training=QUICK_TRAINING)
     assert len(records) == 2
     for record in records:
@@ -365,7 +379,7 @@ def test_keras_run_model_records_every_combination(problem_name, n_features):
             assert math.isfinite(record[key])
 
 
-def test_keras_runs_are_reproducible():
+def test_keras_runs_are_reproducible() -> None:
     """
     The same seed gives the same Keras result twice.
 
@@ -378,7 +392,7 @@ def test_keras_runs_are_reproducible():
     from nn_numpy.benchmarks.keras_models import run_model
 
     splits = make_splits("classification", n_features=4)
-    grid = {"optimizer": ["sgd"], "learning_rate": [0.1], "batch_size": [16]}
+    grid: dict[str, list[Any]] = {"optimizer": ["sgd"], "learning_rate": [0.1], "batch_size": [16]}
     first = run_model("classification", "A1", grid, splits, 9, 0.5, training=QUICK_TRAINING)
     second = run_model("classification", "A1", grid, splits, 9, 0.5, training=QUICK_TRAINING)
     assert first[0]["test_metric"] == second[0]["test_metric"]
@@ -395,7 +409,7 @@ QUICK_TORCH_TRAINING = {
 }
 
 
-def test_torch_network_mirrors_the_architecture_config():
+def test_torch_network_mirrors_the_architecture_config() -> None:
     """
     build_network creates the same layer sequence as the NumPy architecture.
 
@@ -417,7 +431,7 @@ def test_torch_network_mirrors_the_architecture_config():
     assert model[0].in_features == config["input_dimension"]
 
 
-def test_torch_muon_handles_a_bias_free_model():
+def test_torch_muon_handles_a_bias_free_model() -> None:
     """
     "muon" works for a model with weight matrices only (A1, no bias, no batch norm).
 
@@ -434,7 +448,7 @@ def test_torch_muon_handles_a_bias_free_model():
     model = build_network(config["architectures"]["A1"], config["input_dimension"], seed=0)
     optimizer = build_optimizer("muon", model.parameters(), 0.01)
 
-    assert optimizer.adam is None
+    assert optimizer.adam is None  # type: ignore[union-attr]  # "muon" gives MuonWithAdam
     before = [p.detach().clone() for p in model.parameters()]
     optimizer.zero_grad()
     model(torch.randn(16, config["input_dimension"])).mean().backward()
@@ -443,7 +457,7 @@ def test_torch_muon_handles_a_bias_free_model():
 
 
 @pytest.mark.parametrize("name", ["sgd", "momentum", "adam"])
-def test_torch_optimizers(name):
+def test_torch_optimizers(name: str) -> None:
     """
     build_optimizer returns the matching torch.optim optimizer.
 
@@ -463,14 +477,21 @@ def test_torch_optimizers(name):
     optimizer = build_optimizer(name, parameters, 0.01)
     expected = {"sgd": "SGD", "momentum": "SGD", "adam": "Adam"}[name]
     assert type(optimizer).__name__ == expected
-    assert optimizer.defaults["lr"] == pytest.approx(0.01)
+    # The ignores: these three names return a torch.optim.Optimizer, never MuonWithAdam.
+    assert (
+        optimizer.defaults["lr"]  # type: ignore[union-attr]  # not MuonWithAdam
+        == pytest.approx(0.01)
+    )
     if name == "momentum":
-        assert optimizer.defaults["momentum"] == pytest.approx(0.9)
+        assert (
+            optimizer.defaults["momentum"]  # type: ignore[union-attr]  # not MuonWithAdam
+            == pytest.approx(0.9)
+        )
     with pytest.raises(ValueError):
         build_optimizer("adabelief", parameters, 0.01)
 
 
-def test_torch_muon_pairs_matrices_with_muon_and_the_rest_with_adam():
+def test_torch_muon_pairs_matrices_with_muon_and_the_rest_with_adam() -> None:
     """
     "muon" gives 2-D weights to torch.optim.Muon and other parameters to Adam.
 
@@ -488,8 +509,17 @@ def test_torch_muon_pairs_matrices_with_muon_and_the_rest_with_adam():
     model = build_network(config["architectures"]["A2-bn"], config["input_dimension"], seed=0)
     optimizer = build_optimizer("muon", model.parameters(), 0.01)
 
-    muon_params = {id(p) for group in optimizer.muon.param_groups for p in group["params"]}
-    adam_params = {id(p) for group in optimizer.adam.param_groups for p in group["params"]}
+    # The ignores: "muon" gives MuonWithAdam, and A2-bn has 1-D parameters, so adam is set.
+    muon_params = {
+        id(p)
+        for group in optimizer.muon.param_groups  # type: ignore[union-attr]  # MuonWithAdam
+        for p in group["params"]
+    }
+    adam_params = {
+        id(p)
+        for group in optimizer.adam.param_groups  # type: ignore[union-attr]  # MuonWithAdam
+        for p in group["params"]
+    }
     assert muon_params.isdisjoint(adam_params)
     assert muon_params | adam_params == {id(p) for p in model.parameters()}
     assert all(p.ndim == 2 for p in model.parameters() if id(p) in muon_params)
@@ -504,7 +534,7 @@ def test_torch_muon_pairs_matrices_with_muon_and_the_rest_with_adam():
 
 
 @pytest.mark.parametrize("problem_name, n_features", [("classification", 4), ("regression", 8)])
-def test_torch_run_model_records_every_combination(problem_name, n_features):
+def test_torch_run_model_records_every_combination(problem_name: str, n_features: int) -> None:
     """
     run_model trains each grid combination and records finite metrics.
 
@@ -525,7 +555,11 @@ def test_torch_run_model_records_every_combination(problem_name, n_features):
     from nn_numpy.benchmarks.torch_models import run_model
 
     splits = make_splits(problem_name, n_features=n_features)
-    grid = {"optimizer": ["adam"], "learning_rate": [0.01], "batch_size": [16, 32]}
+    grid: dict[str, list[Any]] = {
+        "optimizer": ["adam"],
+        "learning_rate": [0.01],
+        "batch_size": [16, 32],
+    }
     records = run_model(problem_name, "A1", grid, splits, 5, 0.5, training=QUICK_TORCH_TRAINING)
     assert len(records) == 2
     for record in records:
@@ -536,7 +570,7 @@ def test_torch_run_model_records_every_combination(problem_name, n_features):
             assert math.isfinite(record[key])
 
 
-def test_torch_runs_are_reproducible():
+def test_torch_runs_are_reproducible() -> None:
     """
     The same seed gives the same PyTorch result twice.
 
@@ -549,14 +583,14 @@ def test_torch_runs_are_reproducible():
     from nn_numpy.benchmarks.torch_models import run_model
 
     splits = make_splits("classification", n_features=4)
-    grid = {"optimizer": ["sgd"], "learning_rate": [0.1], "batch_size": [16]}
+    grid: dict[str, list[Any]] = {"optimizer": ["sgd"], "learning_rate": [0.1], "batch_size": [16]}
     first = run_model("classification", "A1", grid, splits, 9, 0.5, training=QUICK_TORCH_TRAINING)
     second = run_model("classification", "A1", grid, splits, 9, 0.5, training=QUICK_TORCH_TRAINING)
     assert first[0]["test_metric"] == second[0]["test_metric"]
     assert first[0]["train_loss_history"] == second[0]["train_loss_history"]
 
 
-def test_torch_early_stopping_waits_for_the_guard_and_restores_the_best_epoch():
+def test_torch_early_stopping_waits_for_the_guard_and_restores_the_best_epoch() -> None:
     """
     Early stopping follows the NumPy trainer's rule and restores the best
     checkpoint.
@@ -566,13 +600,18 @@ def test_torch_early_stopping_waits_for_the_guard_and_restores_the_best_epoch():
     With a min_delta so large that only the first epoch counts as an
     improvement, the best epoch is 1. Epochs without improvement only count
     after the 5-epoch guard, so with patience 2 training stops after epoch
-    7. The restored model must give the first epoch's validation loss.
+    7 (= 5 + 2). The restored model must give the first epoch's validation
+    loss.
     """
     pytest.importorskip("torch")
     from nn_numpy.benchmarks.torch_models import run_model
 
     splits = make_splits("regression", n_features=8)
-    grid = {"optimizer": ["adam"], "learning_rate": [0.01], "batch_size": [16]}
+    grid: dict[str, list[Any]] = {
+        "optimizer": ["adam"],
+        "learning_rate": [0.01],
+        "batch_size": [16],
+    }
     training = {
         "epochs": 50,
         "early_stopping": {"patience": 2, "min_delta": 1e9, "min_epochs_before_early_stop": 5},
@@ -583,7 +622,7 @@ def test_torch_early_stopping_waits_for_the_guard_and_restores_the_best_epoch():
     assert record["val_metric"] == pytest.approx(record["val_loss_history"][0], rel=1e-5)
 
 
-def test_torch_divergence_is_flagged_and_never_selected():
+def test_torch_divergence_is_flagged_and_never_selected() -> None:
     """
     A run whose loss overflows is marked diverged with a NaN validation
     metric.
@@ -598,7 +637,7 @@ def test_torch_divergence_is_flagged_and_never_selected():
     from nn_numpy.benchmarks.torch_models import run_model
 
     splits = make_splits("regression", n_features=8)
-    grid = {"optimizer": ["sgd"], "learning_rate": [1e3], "batch_size": [16]}
+    grid: dict[str, list[Any]] = {"optimizer": ["sgd"], "learning_rate": [1e3], "batch_size": [16]}
     training = {"epochs": 30, "early_stopping": {"min_epochs_before_early_stop": 30}}
     (record,) = run_model("regression", "A2", grid, splits, 3, 0.5, training=training)
     assert record["diverged"]

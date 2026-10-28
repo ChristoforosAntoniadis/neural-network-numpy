@@ -8,6 +8,12 @@ creates the run stamp (a YYYYMMDD-HHMMSS time string) that is added to the
 name of every output file, and provides helpers that find the newest
 stamped output on disk so that downstream scripts (analysis, plots, the
 git pre-commit tool) can read the most recent results.
+
+Input: none. The paths are derived from this file's location and the run
+stamp from the clock when the module is first imported.
+
+Output: the path constants, RANDOM_SEED, the run stamp and the stamped-file
+helpers below. Importing the module writes nothing and creates no folders.
 """
 
 from datetime import datetime
@@ -39,6 +45,8 @@ BENCHMARK_FIGURES_DIR = os.path.join(FIGURES_DIR, "benchmarks")
 # Global Configurations
 # Default seed for the data split, weight initialization, dropout masks and
 # shuffling, used whenever a config or results file does not give one.
+# The value carries no meaning: any fixed seed makes reruns identical, and 42
+# keeps the original single-seed results reproducible.
 RANDOM_SEED = 42
 
 # Run stamp used to give every output file of a run a unique name.
@@ -168,7 +176,7 @@ def latest_stamped_outputs(directory: str) -> dict[str, str]:
     Each output is treated on its own, so the newest analysis report and
     the newest summary CSV may come from different runs.
     """
-    latest = {}
+    latest: dict[str, str] = {}
     for path in glob.glob(os.path.join(directory, "**", "*"), recursive=True):
         if not os.path.isfile(path):
             continue

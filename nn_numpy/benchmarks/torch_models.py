@@ -67,7 +67,7 @@ def expand_grid(grid: dict[str, list[Any]]) -> list[dict[str, Any]]:
     -------
     list of dict
         One dict per combination (the Cartesian product), with the keys in
-        sorted order.
+        sorted order. Its keys are the grid's keys, each mapped to one value.
 
     Notes
     -----
@@ -121,7 +121,8 @@ def build_network(
     """
     torch.manual_seed(seed)
 
-    modules = []
+    # Typed as Module, not Linear: BatchNorm1d, activations and Dropout go in too.
+    modules: list[nn.Module] = []
     in_features = input_dimension
     for layer in layer_configs:
         if layer["activation"] not in ACTIVATIONS:
@@ -192,7 +193,9 @@ class MuonWithAdam:
         parameters = list(parameters)
         matrices = [p for p in parameters if p.ndim == 2]
         others = [p for p in parameters if p.ndim != 2]
-        decay = {} if weight_decay is None else {"weight_decay": weight_decay}
+        # Any: the dict is unpacked as keyword arguments into optimizers whose other
+        # parameters have different types, so dict[str, float] would not match them.
+        decay: dict[str, Any] = {} if weight_decay is None else {"weight_decay": weight_decay}
         self.muon = torch.optim.Muon(matrices, lr=learning_rate, **decay)
         self.adam = torch.optim.Adam(others, lr=learning_rate, **decay) if others else None
 
@@ -268,10 +271,12 @@ def build_optimizer(
     two ways: weight decay 0.1 (the NumPy network has none) and bfloat16
     Newton-Schulz (the NumPy network uses float64).
     """
-    decay = {} if weight_decay is None else {"weight_decay": weight_decay}
+    # Any, as in MuonWithAdam: unpacked into optimizers with differently typed parameters.
+    decay: dict[str, Any] = {} if weight_decay is None else {"weight_decay": weight_decay}
     if name == "sgd":
         return torch.optim.SGD(parameters, lr=learning_rate, **decay)
     if name == "momentum":
+        # 0.9 is the momentum coefficient the NumPy network uses (nn_numpy.nn.optimizers).
         return torch.optim.SGD(parameters, lr=learning_rate, momentum=0.9, **decay)
     if name == "adam":
         return torch.optim.Adam(parameters, lr=learning_rate, **decay)
@@ -349,7 +354,7 @@ def evaluate(
 
 def train(
     model: nn.Module,
-    optimizer: torch.optim.Optimizer,
+    optimizer: torch.optim.Optimizer | MuonWithAdam,
     loss_fn: nn.Module,
     splits: tuple[np.ndarray, ...],
     batch_size: int,
@@ -363,8 +368,9 @@ def train(
     ----------
     model : torch.nn.Module
         The model to train, in place.
-    optimizer : torch.optim.Optimizer
-        Optimizer over the model's parameters.
+    optimizer : torch.optim.Optimizer or MuonWithAdam
+        Optimizer over the model's parameters, as built by build_optimizer.
+        Only zero_grad() and step() are called, which both types provide.
     loss_fn : torch.nn.Module
         nn.BCELoss or nn.MSELoss.
     splits : tuple of numpy.ndarray
@@ -402,6 +408,8 @@ def train(
     After the loop, the best checkpoint's weights (and batch-norm
     statistics) are loaded back into the model.
     """
+    # The fallbacks are the values the NumPy configs (configs/*_experiments.json) use;
+    # configs/benchmark_experiments.json sets all four explicitly.
     stopping = training.get("early_stopping", {})
     patience = stopping.get("patience", 10)
     min_delta = stopping.get("min_delta", 1e-4)
@@ -412,6 +420,8 @@ def train(
 
     train_losses, val_losses = [], []
     best_val_loss = math.inf
+    # Stay None only if no epoch finishes with a finite validation loss (immediate
+    # divergence); the model then keeps its last weights.
     best_state, best_epoch = None, None
     epochs_without_improvement = 0
     diverged = False
@@ -440,6 +450,8 @@ def train(
         if val_losses[-1] < best_val_loss - min_delta:
             best_val_loss = val_losses[-1]
             best_epoch = epoch
+            # deepcopy: state_dict() returns references to the live tensors, which later
+            # steps would overwrite.
             best_state = copy.deepcopy(model.state_dict())
             epochs_without_improvement = 0
         elif epoch > guard:

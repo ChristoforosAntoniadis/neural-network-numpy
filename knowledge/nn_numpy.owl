@@ -1872,11 +1872,23 @@
     <nnfs:belongsToStage rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#InfrastructureStage"/>
     <nnfs:runs rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#nn_numpy.benchmarks.tuning"/>
   </owl:NamedIndividual>
+  <owl:NamedIndividual rdf:about="https://github.com/WarmupHero/neural-network-numpy/ontology#make_typecheck">
+    <rdf:type rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#MakeTarget"/>
+    <rdfs:label>make typecheck</rdfs:label>
+    <rdfs:comment>Check the type hints with mypy (reports only, changes nothing)</rdfs:comment>
+    <nnfs:belongsToStage rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#InfrastructureStage"/>
+  </owl:NamedIndividual>
   <owl:NamedIndividual rdf:about="https://github.com/WarmupHero/neural-network-numpy/ontology#matplotlib">
     <rdf:type rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#CoreLibrary"/>
     <rdfs:label>matplotlib</rdfs:label>
     <rdfs:comment>matplotlib ==3.9.2</rdfs:comment>
     <nnfs:version>==3.9.2</nnfs:version>
+  </owl:NamedIndividual>
+  <owl:NamedIndividual rdf:about="https://github.com/WarmupHero/neural-network-numpy/ontology#mypy">
+    <rdf:type rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#DevelopmentLibrary"/>
+    <rdfs:label>mypy</rdfs:label>
+    <rdfs:comment>mypy ==2.4.0</rdfs:comment>
+    <nnfs:version>==2.4.0</nnfs:version>
   </owl:NamedIndividual>
   <owl:NamedIndividual rdf:about="https://github.com/WarmupHero/neural-network-numpy/ontology#nn_numpy">
     <rdf:type rdf:resource="https://github.com/WarmupHero/neural-network-numpy/ontology#Package"/>

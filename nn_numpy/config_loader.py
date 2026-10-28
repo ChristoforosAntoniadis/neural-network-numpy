@@ -4,6 +4,13 @@ Loading and validation of the JSON experiment configs.
 Defines `ConfigLoader`, which reads a config file from the project's
 `configs/` folder and checks its structure and values before any
 experiment runs.
+
+Input: a JSON file name in configs/ (classification_experiments.json or
+regression_experiments.json).
+
+Output: the parsed config dictionary, validated and with each architecture's
+training options split off into config["architecture_options"]. Nothing is
+written to disk.
 """
 
 import json
@@ -89,7 +96,10 @@ class ConfigLoader:
         Returns
         -------
         dict
-            Parsed JSON config as a Python dictionary.
+            Parsed JSON config as a Python dictionary. An experiment config
+            has the keys "task_type", "input_dimension", "loss",
+            "preprocessing", "architectures" and "experiments"; validate()
+            checks them.
 
         Raises
         ------

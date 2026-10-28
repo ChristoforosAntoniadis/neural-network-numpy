@@ -10,6 +10,11 @@ This module defines the building blocks that sit between activations:
 Every layer exposes forward(X) and backward(grad_output). Layers with
 trainable parameters also expose get_params(), get_grads() and
 set_params(), which the optimizers and the early-stopping checkpoint use.
+
+Input: NumPy batches of shape (batch_size, features) and upstream gradients.
+
+Output: the layer outputs and input gradients, plus each layer's parameter
+gradients stored as attributes. Nothing is written to disk.
 """
 
 import numpy as np
@@ -165,7 +170,7 @@ class Dense:
 
         # This will store the input batch from the forward pass.
         # We need it later during backpropagation to compute dL/dW.
-        self.input = None
+        self.input: np.ndarray = None  # type: ignore[assignment]  # set in forward()
 
         # Gradients of the loss with respect to the parameters:
         # dL/dW and dL/db. They have the same shapes as the parameters.
@@ -222,6 +227,9 @@ class Dense:
           ignores the layer size.
         """
         if init == "normal":
+            # No recorded justification for 0.1; it is kept so the original
+            # results stay reproducible, and A2-he / A2-bias-he test the
+            # size-aware alternative.
             return 0.1
         if init == "he":
             return np.sqrt(2.0 / input_dim)
@@ -517,8 +525,11 @@ class BatchNorm:
         momentum : float, default=0.1
             Weight given to the current batch when updating the running
             statistics: running = (1 - momentum) * running + momentum * batch.
+            0.1 is PyTorch's BatchNorm1d default, which uses the same
+            convention.
         eps : float, default=1e-5
             Small constant added to the variance for numerical stability.
+            1e-5 is PyTorch's BatchNorm1d default.
 
         Returns
         -------
@@ -557,9 +568,10 @@ class BatchNorm:
         self.training = True
 
         # Values cached by forward() for the backward pass.
-        self.x_hat = None
-        self.inv_std = None
-        self.cached_training = None
+        self.x_hat: np.ndarray = None  # type: ignore[assignment]  # set in forward()
+        self.inv_std: np.ndarray = None  # type: ignore[assignment]  # set in forward()
+        # None until the first forward pass; backward() is only called after one.
+        self.cached_training: bool | None = None
 
     def forward(self, X: np.ndarray) -> np.ndarray:
         """
@@ -910,7 +922,7 @@ class Dropout:
         self.training = True
 
         # Mask from the last training-mode forward pass, reused by backward().
-        self.mask = None
+        self.mask: np.ndarray | None = None
 
     def forward(self, X: np.ndarray) -> np.ndarray:
         """

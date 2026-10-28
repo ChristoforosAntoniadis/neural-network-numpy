@@ -32,6 +32,7 @@ from xml.sax.saxutils import escape
 import pandas as pd
 from rdflib import OWL, RDF, RDFS, XSD, BNode, Graph, Literal, Namespace, URIRef
 from rdflib.collection import Collection
+from rdflib.term import Node
 
 from nn_numpy.config_loader import ConfigLoader
 
@@ -515,6 +516,21 @@ class Builder:
     """
 
     def __init__(self) -> None:
+        """
+        Create the empty graph and bind its prefixes.
+
+        Returns
+        -------
+        None
+            Sets self.graph (an empty rdflib.Graph) and the blank-node
+            counter self._blank = 0.
+
+        Notes
+        -----
+        Processing:
+        1. Create the graph and bind the nnfs, owl and xsd prefixes.
+        2. Start the blank-node counter at 0, so the first node is b0001.
+        """
         self.graph = Graph()
         self.graph.bind("nnfs", NNFS)
         self.graph.bind("owl", OWL)
@@ -536,6 +552,8 @@ class Builder:
         1. Increment the counter and build the node name from it.
         """
         self._blank += 1
+        # Four digits keep alphabetical order equal to creation order (axioms are sorted
+        # by str) for up to 9,999 nodes; a build creates 88.
         return BNode(f"b{self._blank:04d}")
 
     def entity(self, name: str, kind: URIRef, label: str, comment: str | None = None) -> URIRef:
@@ -1584,6 +1602,30 @@ def imports_of(path: Path, modules: dict[str, Path]) -> tuple[set[str], set[str]
     internal, external = set(), set()
 
     def resolve(name: str) -> None:
+        """
+        Record one imported name as internal, external or ignored.
+
+        Parameters
+        ----------
+        name : str
+            Dotted import name, e.g. "nn_numpy.nn.layers" or "torch.nn".
+
+        Returns
+        -------
+        None
+            Adds to the enclosing internal or external set.
+
+        Notes
+        -----
+        Processing:
+        1. A repository module name is added to internal.
+        2. Otherwise a name from the repository's own packages or the
+           standard library is ignored.
+        3. Anything else adds its top-level package to external.
+
+        Step 2 also drops names such as "nn_numpy.nn.layers.Dense" (a class
+        imported from a module), which step 1 does not recognize as a module.
+        """
         if name in modules:
             internal.add(name)
             return
@@ -2091,14 +2133,16 @@ PREFIXES = {
 }
 
 
-def qname(iri: URIRef) -> str:
+def qname(iri: Node) -> str:
     """
     Prefixed name of an IRI in one of the file's namespaces.
 
     Parameters
     ----------
-    iri : rdflib.URIRef
-        An IRI in the rdf, rdfs, owl, xsd or nnfs namespace.
+    iri : rdflib.term.Node
+        An IRI in the rdf, rdfs, owl, xsd or nnfs namespace. Typed as Node
+        because rdflib returns predicates and rdf:type objects as Node; any
+        other node (a blank node, a literal) raises ValueError.
 
     Returns
     -------
@@ -2160,9 +2204,55 @@ def write_rdfxml(graph: Graph, path: Path) -> None:
     lines: list[str] = []
 
     def attr(value: str) -> str:
+        """
+        Escape a string for use inside a double-quoted XML attribute.
+
+        Parameters
+        ----------
+        value : str
+            Raw attribute value, e.g. an IRI.
+
+        Returns
+        -------
+        str
+            value with &, <, > and " replaced by entities.
+
+        Notes
+        -----
+        xml.sax.saxutils.escape handles &, < and > only; the extra mapping
+        covers the double quote that delimits the attribute.
+        """
         return escape(value, {'"': "&quot;"})
 
-    def write_object(predicate: URIRef, obj: Any, depth: int) -> None:
+    def write_object(predicate: Node, obj: Any, depth: int) -> None:
+        """
+        Append the XML for one predicate-object pair of a subject.
+
+        Parameters
+        ----------
+        predicate : rdflib.term.Node
+            The property; always an IRI in RDF, but typed as Node because
+            rdflib returns predicates as Node.
+        obj : rdflib.URIRef, rdflib.Literal or rdflib.BNode
+            The object.
+        depth : int
+            Nesting level; each level indents by two spaces.
+
+        Returns
+        -------
+        None
+            Appends lines to the enclosing lines list.
+
+        Notes
+        -----
+        Processing:
+        1. An IRI becomes an empty element with rdf:resource.
+        2. A literal becomes a text element, with rdf:datatype if it has one.
+        3. A blank node that heads an RDF list becomes a
+           rdf:parseType="Collection" element; named members are
+           rdf:Description references, blank members nested nodes.
+        4. Any other blank node is nested with write_node.
+        """
         pad = "  " * depth
         name = qname(predicate)
         if isinstance(obj, URIRef):
@@ -2187,6 +2277,31 @@ def write_rdfxml(graph: Graph, path: Path) -> None:
             lines.append(f"{pad}</{name}>")
 
     def write_node(node: Any, depth: int) -> None:
+        """
+        Append the XML element for a subject and all its properties.
+
+        Parameters
+        ----------
+        node : rdflib.URIRef or rdflib.BNode
+            A named subject (written with rdf:about) or a blank node
+            (written without an identifier, nested in its parent).
+        depth : int
+            Nesting level; each level indents by two spaces.
+
+        Returns
+        -------
+        None
+            Appends lines to the enclosing lines list.
+
+        Notes
+        -----
+        Processing:
+        1. Name the element after the node's declaration type, else its
+           only rdf:type, else rdf:Description.
+        2. Leave out the rdf:type triple the element name already states.
+        3. Write an empty element if nothing is left; otherwise write each
+           remaining pair with write_object, in a fixed order.
+        """
         pad = "  " * depth
         types = sorted(graph.objects(node, RDF.type), key=str)
         declared = next((t for t in DECLARATION_TYPES if t in types), None)
@@ -2204,6 +2319,27 @@ def write_rdfxml(graph: Graph, path: Path) -> None:
         lines.append(f"{pad}<{element}{about}>")
 
         def order(pair: tuple[Any, Any]) -> tuple[int, str, int, str]:
+            """
+            Sort key for a node's predicate-object pairs.
+
+            Parameters
+            ----------
+            pair : tuple of (rdflib.term.Node, rdflib.term.Node)
+                A (predicate, object) pair.
+
+            Returns
+            -------
+            tuple of (int, str, int, str)
+                (rank in PREDICATE_ORDER or after all of them, prefixed
+                predicate name, 0 for IRIs / 1 for literals / 2 for blank
+                nodes, object as text).
+
+            Notes
+            -----
+            A total order on everything but blank-node objects keeps the
+            output byte-identical between builds; the blank nodes' own
+            names are numbered deterministically by Builder.bnode.
+            """
             p, o = pair
             rank = PREDICATE_ORDER.index(p) if p in PREDICATE_ORDER else len(PREDICATE_ORDER)
             kind = 0 if isinstance(o, URIRef) else 1 if isinstance(o, Literal) else 2
@@ -2214,6 +2350,22 @@ def write_rdfxml(graph: Graph, path: Path) -> None:
         lines.append(f"{pad}</{element}>")
 
     def subject_order(subject: URIRef) -> tuple[int, str]:
+        """
+        Sort key for the top-level named subjects.
+
+        Parameters
+        ----------
+        subject : rdflib.URIRef
+            A named subject of the graph.
+
+        Returns
+        -------
+        tuple of (int, str)
+            (position of its declaration type in DECLARATION_TYPES, or
+            after all of them if undeclared; the IRI), so the file lists
+            the ontology header, annotation properties, classes, object
+            and data properties, then individuals, each alphabetically.
+        """
         types = set(graph.objects(subject, RDF.type))
         kind = next(
             (i for i, t in enumerate(DECLARATION_TYPES) if t in types), len(DECLARATION_TYPES)

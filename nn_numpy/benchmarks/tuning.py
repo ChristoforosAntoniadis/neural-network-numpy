@@ -175,6 +175,32 @@ def tune_model(
     trials = []
 
     def objective(trial: optuna.trial.Trial) -> float:
+        """
+        Train one drawn configuration and return its validation metric for Optuna.
+
+        Parameters
+        ----------
+        trial : optuna.trial.Trial
+            The trial that draws the hyperparameters.
+
+        Returns
+        -------
+        float
+            The validation BCE or MSE of the trained configuration, or infinity if
+            the run diverged (its validation metric is NaN).
+
+        Notes
+        -----
+        Processing:
+        1. Draw one value per hyperparameter from the search space.
+        2. Wrap each value in a one-element list, so the library's run_model,
+           which expects a grid, trains exactly this configuration.
+        3. Train and score it on the tuning seed's split, tag the record with
+           the trial number and append it to `trials` (from the enclosing scope).
+        4. Return the validation metric. NaN is replaced by infinity because
+           Optuna marks a trial that returns NaN as failed, and the sampler
+           ignores failed trials; infinity keeps it as a completed, worst trial.
+        """
         params = suggest_params(trial, config["search_space"])
         grid = {name: [value] for name, value in params.items()}
         record = run_model(
@@ -257,9 +283,10 @@ def tune_library(
     Returns
     -------
     evaluations : list of dict
-        The tuned configurations' records on every seed.
+        The tuned configurations' records on every seed, with the keys
+        listed in the library's run_model.
     trials : list of dict
-        Every tuning trial's record.
+        Every tuning trial's record: the same keys plus "trial" (int).
 
     Notes
     -----

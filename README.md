@@ -221,6 +221,7 @@ make knowledge-base               # OWL ontology of the repo -> knowledge/nn_num
 
 make test                         # gradient checks, layer tests, split checks, training tests
 make lint                         # check style and lint with ruff (changes nothing)
+make typecheck                    # check the type hints with mypy (changes nothing)
 make format                       # apply ruff's fixes and formatting
 make help                         # list every command
 ```

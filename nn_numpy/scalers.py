@@ -4,6 +4,11 @@ Feature scaling used during preprocessing.
 Provides a NumPy StandardScaler that learns per-column mean and
 standard deviation on the training data and applies the same
 transformation to any other split.
+
+Input: a NumPy feature matrix of shape (n_samples, n_features), the training
+split for fit() and any split for transform().
+
+Output: the scaled matrix, same shape, float64. Nothing is written to disk.
 """
 
 from typing import Self
@@ -59,8 +64,8 @@ class StandardScaler:
 
         1. Set mean_ and std_ to None, marking the scaler as unfitted.
         """
-        self.mean_ = None
-        self.std_ = None
+        self.mean_: np.ndarray | None = None
+        self.std_: np.ndarray | None = None
 
     def fit(self, X: np.ndarray) -> Self:
         """
@@ -107,6 +112,8 @@ class StandardScaler:
         # Replacing 0 with a tiny number avoids numerical errors.
         # In practice, (X - mean) will be 0 for that feature anyway,
         # so the transformed values will remain 0.
+        # That makes the replacement value arbitrary: any nonzero number gives
+        # 0 / value = 0, and 1e-8 is simply a small nonzero placeholder.
         self.std_ = np.where(self.std_ == 0, 1e-8, self.std_)
 
         return self

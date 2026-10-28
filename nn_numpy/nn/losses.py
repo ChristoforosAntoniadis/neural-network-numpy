@@ -5,6 +5,11 @@ Each loss class has forward(y_true, y_pred), which returns the scalar loss
 averaged over the batch, and backward(y_true, y_pred), which returns
 dL/dy_pred, the gradient that starts backpropagation. get_loss() builds a
 loss object from a config string.
+
+Input: targets and predictions as NumPy arrays of shape (batch_size, 1).
+
+Output: the batch-mean loss (float) and its gradient with respect to the
+predictions. Nothing is written to disk.
 """
 
 import numpy as np
@@ -175,6 +180,9 @@ class BCELoss:
         """
         # Small constant for numerical stability.
         # Prevents log(0), which is undefined.
+        # Why 1e-12: -log(1e-12) = 27.6 caps one sample's loss at a finite
+        # value, and 1 - 1e-12 is still distinct from 1 in float64 (whose
+        # spacing near 1 is 1.1e-16), so both ends of the clip are exact.
         epsilon = 1e-12
 
         # Clip probabilities to stay safely inside (0, 1)

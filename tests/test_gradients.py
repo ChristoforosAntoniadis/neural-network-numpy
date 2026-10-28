@@ -7,6 +7,9 @@ against a central finite-difference estimate:
     dL/dw ~= (L(w + eps) - L(w - eps)) / (2 * eps)
 """
 
+from collections.abc import Callable
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -14,18 +17,27 @@ from nn_numpy.nn.activations import get_activation
 from nn_numpy.nn.losses import get_loss
 from nn_numpy.nn.network import NeuralNetwork
 
+# Step of the central differences. Their truncation error is of order EPS^2 = 1e-12, and
+# their rounding error of order 2.2e-16 * |f| / EPS = 2e-10 for |f| ~ 1 (2.2e-16 is the
+# float64 machine epsilon). The sum of the two is smallest near EPS = (2.2e-16)^(1/3) = 6e-6,
+# so EPS = 1e-6 sits close to the optimum.
 EPS = 1e-6
+# Tolerances for analytic vs. numerical gradients. The finite-difference error above is
+# about 1e-10, so RTOL = 1e-5 leaves five orders of magnitude of margin, while a wrong
+# gradient (a missing factor or a flipped sign) has a relative error of order 1. ATOL
+# handles entries at or near zero, where a relative test is meaningless; 1e-8 is still
+# 100 times the finite-difference error.
 RTOL = 1e-5
 ATOL = 1e-8
 
 
-def numerical_grad(f, x):
+def numerical_grad(f: Callable[[], float], x: np.ndarray) -> np.ndarray:
     """
     Estimate the gradient of a scalar function by central finite differences.
 
     Parameters
     ----------
-    f : callable
+    f : collections.abc.Callable[[], float]
         Function with no arguments that returns a scalar (float). It must
         read `x` (directly or through an object that holds it), so that
         changing `x` in place changes its result.
@@ -57,6 +69,7 @@ def numerical_grad(f, x):
     it = np.nditer(x, flags=["multi_index"])
     for _ in it:
         idx = it.multi_index
+        # x[idx] is a scalar copy, so writing it back below restores x exactly.
         original = x[idx]
         x[idx] = original + EPS
         f_plus = f()
@@ -67,7 +80,9 @@ def numerical_grad(f, x):
     return grad
 
 
-def away_from_zero(rng, shape, margin=0.1):
+def away_from_zero(
+    rng: np.random.RandomState, shape: tuple[int, ...], margin: float = 0.1
+) -> np.ndarray:
     """
     Draw random values whose absolute value is at least `margin`.
 
@@ -93,14 +108,17 @@ def away_from_zero(rng, shape, margin=0.1):
 
     Why: ReLU has a kink at 0 where its derivative jumps. Keeping inputs
     away from 0 means the finite-difference window (plus or minus EPS)
-    never crosses the kink, so the numerical gradient is valid.
+    never crosses the kink, so the numerical gradient is valid. The
+    default margin of 0.1 is 1e5 times EPS. With |x| < 2.0, sigmoid and
+    tanh stay out of their flat tails (tanh'(2) = 1 - tanh(2)^2 = 0.07),
+    so the compared gradients are not vanishingly small.
     """
     x = rng.uniform(margin, 2.0, size=shape)
     return x * rng.choice([-1.0, 1.0], size=shape)
 
 
 @pytest.mark.parametrize("name", ["relu", "sigmoid", "tanh", "linear"])
-def test_activation_backward_matches_numerical(name):
+def test_activation_backward_matches_numerical(name: str) -> None:
     """
     Each activation's backward pass matches the finite-difference gradient.
 
@@ -131,7 +149,7 @@ def test_activation_backward_matches_numerical(name):
     np.testing.assert_allclose(analytic, numeric, rtol=RTOL, atol=ATOL)
 
 
-def test_mse_backward_matches_numerical():
+def test_mse_backward_matches_numerical() -> None:
     """
     MSE loss's gradient with respect to the predictions matches finite differences.
 
@@ -152,7 +170,7 @@ def test_mse_backward_matches_numerical():
     np.testing.assert_allclose(analytic, numeric, rtol=RTOL, atol=ATOL)
 
 
-def test_bce_backward_matches_numerical():
+def test_bce_backward_matches_numerical() -> None:
     """
     BCE loss's gradient with respect to the predictions matches finite differences.
 
@@ -174,7 +192,7 @@ def test_bce_backward_matches_numerical():
     np.testing.assert_allclose(analytic, numeric, rtol=RTOL, atol=ATOL)
 
 
-NETWORK_CASES = [
+NETWORK_CASES: list[tuple[str, str, list[tuple[str, int]], str, dict[str, Any]]] = [
     # (id, loss, hidden layers, output activation, extra settings for every Dense layer)
     ("A1-style_bce", "bce", [("sigmoid", 6)], "sigmoid", {}),
     ("A2-style_bce", "bce", [("relu", 6), ("relu", 6), ("relu", 6)], "sigmoid", {}),
@@ -226,7 +244,9 @@ NETWORK_CASES = [
     [c[1:] for c in NETWORK_CASES],
     ids=[c[0] for c in NETWORK_CASES],
 )
-def test_network_weight_gradients_match_numerical(loss_name, hidden, output_activation, extra):
+def test_network_weight_gradients_match_numerical(
+    loss_name: str, hidden: list[tuple[str, int]], output_activation: str, extra: dict[str, Any]
+) -> None:
     """
     Backprop gives the correct gradient for every trainable parameter of a full network.
 
@@ -241,7 +261,7 @@ def test_network_weight_gradients_match_numerical(loss_name, hidden, output_acti
         Hidden layers as (activation name, number of units) pairs.
     output_activation : str
         Activation of the single output unit ("sigmoid" or "linear").
-    extra : dict
+    extra : dict[str, Any]
         Extra settings applied to every Dense layer config, such as
         {"use_bias": True, "init": "he"} or {"batch_norm": True}.
 
@@ -283,8 +303,16 @@ def test_network_weight_gradients_match_numerical(loss_name, hidden, output_acti
         {name: g.copy() for name, g in layer.get_grads().items()} for layer in dense_layers
     ]
 
-    def loss_value():
-        """Return the loss of a fresh forward pass with the current parameters."""
+    def loss_value() -> float:
+        """
+        Return the loss of a fresh forward pass with the current parameters.
+
+        Returns
+        -------
+        float
+            The loss of `network` on (X, y); `numerical_grad` perturbs the
+            parameters in place between calls.
+        """
         return loss.forward(y, network.forward(X))
 
     # Compare each parameter's analytic gradient with a numerical estimate,

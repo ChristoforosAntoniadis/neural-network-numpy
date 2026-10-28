@@ -9,6 +9,7 @@ venv/
 .ipynb_checkpoints/
 .vscode/
 .ruff_cache/
+.mypy_cache/
 *.egg-info/
 build/
 

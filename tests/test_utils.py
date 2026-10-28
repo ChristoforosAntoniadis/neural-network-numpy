@@ -4,13 +4,18 @@ stamped filename and finding the newest stamped file(s) in a folder.
 """
 
 import os
+from typing import TYPE_CHECKING
 
 import pytest
 
 from nn_numpy.config import latest_stamped_file, latest_stamped_outputs, stamped_filename
 
+if TYPE_CHECKING:
+    # Only for the tmp_path annotations; the tests themselves never import pathlib.
+    from pathlib import Path
 
-def test_stamped_filename_inserts_stamp_before_extension():
+
+def test_stamped_filename_inserts_stamp_before_extension() -> None:
     """
     stamped_filename inserts "_<stamp>" just before the file extension.
 
@@ -27,7 +32,7 @@ def test_stamped_filename_inserts_stamp_before_extension():
     assert stamped_filename("a.b.csv", "20260101-000000") == "a.b_20260101-000000.csv"
 
 
-def test_latest_stamped_file_picks_newest_and_ignores_decoys(tmp_path):
+def test_latest_stamped_file_picks_newest_and_ignores_decoys(tmp_path: "Path") -> None:
     """
     latest_stamped_file returns the newest correctly stamped file and ignores decoys.
 
@@ -41,7 +46,8 @@ def test_latest_stamped_file_picks_newest_and_ignores_decoys(tmp_path):
     Three stamped .json files, one unstamped "backup" file and one newer
     stamped file with the wrong extension are created. The function must
     return the path of the newest stamped .json file
-    (20260301-120000).
+    (20260301-120000). The files are created out of time order, so the
+    result cannot come from the creation order or the modification time.
     """
     for name in [
         "main_results_full_20260101-000000.json",
@@ -56,7 +62,7 @@ def test_latest_stamped_file_picks_newest_and_ignores_decoys(tmp_path):
     assert latest == str(tmp_path / "main_results_full_20260301-120000.json")
 
 
-def test_latest_stamped_file_raises_when_nothing_matches(tmp_path):
+def test_latest_stamped_file_raises_when_nothing_matches(tmp_path: "Path") -> None:
     """
     latest_stamped_file raises FileNotFoundError when no file matches.
 
@@ -73,7 +79,7 @@ def test_latest_stamped_file_raises_when_nothing_matches(tmp_path):
         latest_stamped_file(str(tmp_path), "main_results_full", ".json")
 
 
-def test_latest_stamped_outputs_keeps_newest_per_output(tmp_path):
+def test_latest_stamped_outputs_keeps_newest_per_output(tmp_path: "Path") -> None:
     """
     latest_stamped_outputs keeps only the newest stamped file for each output, including subfolders.
 

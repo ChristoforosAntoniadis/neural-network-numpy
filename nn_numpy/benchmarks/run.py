@@ -87,6 +87,9 @@ def get_runner(library: str) -> Callable[..., list[dict[str, Any]]]:
     1. Import the library's module only when it is needed, so running one
        library doesn't require the others to be installed.
     """
+    # Declared once for all three imports: the scikit-learn runner takes no training
+    # settings, so the three run_model functions have different signatures.
+    run_model: Callable[..., list[dict[str, Any]]]
     if library == "sklearn":
         from nn_numpy.benchmarks.sklearn_models import run_model
 
@@ -117,7 +120,8 @@ def run_library(library: str, library_config: dict[str, Any]) -> list[dict[str, 
     Returns
     -------
     list of dict
-        All result records, as returned by the library's run_model.
+        All result records, as returned by the library's run_model (its
+        docstring lists the keys).
 
     Notes
     -----

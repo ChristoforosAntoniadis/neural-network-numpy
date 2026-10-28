@@ -38,7 +38,11 @@ def load_problem_config(problem_name: str) -> dict[str, Any]:
     Returns
     -------
     dict
-        The validated config, as used by the main pipeline.
+        The validated config, as used by the main pipeline. Keys:
+        "task_type", "loss", "input_dimension" (int), "architectures" (dict of
+        architecture name to list of layer dicts), "architecture_options",
+        "preprocessing" (dict with "enabled" and "scale_features") and
+        "experiments" (the grid and early-stopping settings).
 
     Notes
     -----

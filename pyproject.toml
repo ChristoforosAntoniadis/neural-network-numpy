@@ -26,6 +26,8 @@ dev = [
     # The knowledge base (tools/build_knowledge_base.py) and its tests.
     "rdflib==7.6.0",
     "owlrl==7.6.2",
+    # Static type checker: make typecheck.
+    "mypy==2.4.0",
 ]
 # Libraries the NumPy network is compared against (nn_numpy.benchmarks).
 # Install with  pip install -e ".[benchmarks]"  (or  make benchmark-requirements).
@@ -46,6 +48,28 @@ include = ["nn_numpy*"]
 [tool.pytest.ini_options]
 pythonpath = ["."]
 testpaths = ["tests"]
+
+[tool.mypy]
+python_version = "3.12"
+files = ["nn_numpy", "tests", "tools"]
+# tests/ has no __init__.py, yet tests/test_batchnorm.py imports tests.test_gradients: map files
+# to modules from the repository root so each test file has a single module name.
+explicit_package_bases = true
+mypy_path = "."
+# Strict about this project: every function must be fully annotated, and annotated bodies are
+# checked.
+disallow_untyped_defs = true
+disallow_incomplete_defs = true
+check_untyped_defs = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+# A variable may be re-bound to a value of a different type (e.g. a list filtered down to its
+# non-None items) without being renamed; local_partial_types is required by that option.
+allow_redefinition_new = true
+local_partial_types = true
+# Lenient about libraries without type information (seaborn, scikit-learn, ucimlrepo, owlrl,
+# parts of Keras...): their objects are treated as Any rather than reported.
+ignore_missing_imports = true
 
 [tool.ruff]
 line-length = 99

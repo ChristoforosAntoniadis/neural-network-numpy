@@ -47,7 +47,8 @@ def train_val_test_split(
     val_size : float, default=0.2
         Fraction of rows assigned to the validation set.
     test_size : float, default=0.2
-        Fraction of rows assigned to the test set.
+        Fraction of rows assigned to the test set. With val_size = 0.2 this
+        leaves 60% for training: the project's 60 / 20 / 20 split.
         The remaining rows form the training set.
     stratify_col : str or None, default=None
         If given, the split is done separately inside each value of this
@@ -104,6 +105,8 @@ def train_val_test_split(
 
         val_idx.append(positions[:n_val])
         test_idx.append(positions[n_val : n_val + n_test])
+        # Train takes the remainder, so the three slices cover every row
+        # exactly once whatever round() does at a .5 boundary.
         train_idx.append(positions[n_val + n_test :])
 
     # Merge the groups and shuffle again, so rows are not ordered by class.

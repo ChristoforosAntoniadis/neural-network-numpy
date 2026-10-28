@@ -49,7 +49,10 @@ CONFIG_FILES = {
 }
 
 # Preprocessing class for each problem type.
-PREPROCESSORS = {"classification": PreprocessBanknote, "regression": PreprocessEnergy}
+PREPROCESSORS: dict[str, type[PreprocessBanknote] | type[PreprocessEnergy]] = {
+    "classification": PreprocessBanknote,
+    "regression": PreprocessEnergy,
+}
 
 # Experiment outputs (the summary CSV and the full JSON results) are saved
 # in REPORT_DIR, i.e. reports/, imported from nn_numpy.config.

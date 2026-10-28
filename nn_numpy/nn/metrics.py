@@ -4,6 +4,10 @@ Evaluation metrics reported for trained models.
 The metrics reuse the training losses (BCELoss and MSELoss) so that the
 reported numbers are directly comparable with the loss curves. Both
 functions accept 1-D or column-vector inputs and return a plain float.
+
+Input: targets and predictions (or probabilities) as array-likes.
+
+Output: one float per call. Nothing is written to disk.
 """
 
 import numpy as np
@@ -112,6 +116,7 @@ def accuracy(y_true: ArrayLike, y_prob: ArrayLike, threshold: float = 0.5) -> fl
     y_prob : array-like of shape (n_samples,) or (n_samples, 1)
         Predicted probability of class 1 for each sample.
     threshold : float, default=0.5
+        0.5 predicts whichever class has the higher probability.
         A sample is predicted as class 1 when its probability is at least
         this value.
 

@@ -10,6 +10,8 @@ shallow architecture) need a reasoner with datatype facets, such as HermiT
 in Protégé, so they are not checked here.
 """
 
+from typing import TYPE_CHECKING
+
 import pytest
 
 rdflib = pytest.importorskip("rdflib")
@@ -17,11 +19,16 @@ owlrl = pytest.importorskip("owlrl")
 
 from rdflib import OWL, RDF, RDFS, Graph, URIRef
 from rdflib.compare import isomorphic
+from rdflib.term import Node
 from tools.build_knowledge_base import NNFS, build_graph, write_rdfxml
+
+if TYPE_CHECKING:
+    # Only for the tmp_path annotation; the tests themselves never import pathlib.
+    from pathlib import Path
 
 
 @pytest.fixture(scope="module")
-def graph():
+def graph() -> Graph:
     """
     The knowledge base as built from the repository, once per module.
 
@@ -39,7 +46,7 @@ def graph():
 
 
 @pytest.fixture(scope="module")
-def inferred(graph):
+def inferred(graph: Graph) -> Graph:
     """
     The knowledge base after OWL RL reasoning.
 
@@ -65,9 +72,16 @@ def inferred(graph):
     return copy
 
 
-def test_written_file_reads_back_to_the_same_graph(graph, tmp_path):
+def test_written_file_reads_back_to_the_same_graph(graph: Graph, tmp_path: "Path") -> None:
     """
     write_rdfxml produces RDF/XML that parses to an isomorphic graph, twice over.
+
+    Parameters
+    ----------
+    graph : rdflib.Graph
+        The asserted ontology (module-scoped fixture).
+    tmp_path : pathlib.Path
+        Empty temporary directory provided by pytest.
 
     Notes
     -----
@@ -85,9 +99,14 @@ def test_written_file_reads_back_to_the_same_graph(graph, tmp_path):
     assert first.read_bytes() == second.read_bytes()
 
 
-def test_no_entity_has_two_kinds_and_no_reference_is_dangling(graph):
+def test_no_entity_has_two_kinds_and_no_reference_is_dangling(graph: Graph) -> None:
     """
     Every nnfs IRI is declared exactly once as a class, property or individual.
+
+    Parameters
+    ----------
+    graph : rdflib.Graph
+        The asserted ontology (module-scoped fixture).
 
     Notes
     -----
@@ -103,7 +122,7 @@ def test_no_entity_has_two_kinds_and_no_reference_is_dangling(graph):
         OWL.AnnotationProperty,
         OWL.NamedIndividual,
     ]
-    declared = {}
+    declared: dict[URIRef, URIRef] = {}
     for kind in kinds:
         for entity in graph.subjects(RDF.type, kind):
             if isinstance(entity, URIRef):
@@ -116,12 +135,19 @@ def test_no_entity_has_two_kinds_and_no_reference_is_dangling(graph):
         if isinstance(term, URIRef) and str(term).startswith(str(NNFS))
     }
     assert used - set(declared) == set()
+    # rdflib names generated blank nodes b0, b1, ...; one leaking into the nnfs namespace
+    # would mean a missing name was filled in with a blank-node id.
     assert not any(str(e)[len(str(NNFS)) :].startswith("b0") for e in declared)
 
 
-def test_assertions_respect_domains_and_ranges(graph):
+def test_assertions_respect_domains_and_ranges(graph: Graph) -> None:
     """
     Every property assertion between individuals matches the property's domain and range.
+
+    Parameters
+    ----------
+    graph : rdflib.Graph
+        The asserted ontology (module-scoped fixture).
 
     Notes
     -----
@@ -130,12 +156,35 @@ def test_assertions_respect_domains_and_ranges(graph):
     one of its subclasses. The same check is applied to data properties'
     domains. A violation would make the ontology inconsistent in Protégé.
     """
-    subclasses = {}
+    subclasses: dict[Node, set[Node]] = {}
     for sub, sup in graph.subject_objects(RDFS.subClassOf):
         if isinstance(sub, URIRef) and isinstance(sup, URIRef):
             subclasses.setdefault(sup, set()).add(sub)
 
-    def descendants(cls):
+    def descendants(cls: Node) -> set[Node]:
+        """
+        A class together with all its direct and indirect subclasses.
+
+        Parameters
+        ----------
+        cls : rdflib.term.Node
+            The class to start from, e.g. a property's domain.
+
+        Returns
+        -------
+        set of rdflib.term.Node
+            cls and every named class below it in the rdfs:subClassOf tree.
+
+        Notes
+        -----
+        Processing:
+        1. Start with cls as the only found class and the only frontier entry.
+        2. Pop a class, add its not-yet-found direct subclasses to both sets.
+        3. Stop when the frontier is empty.
+
+        A plain transitive closure, written out so the test doesn't depend
+        on the reasoner whose results the other tests check.
+        """
         found, frontier = {cls}, [cls]
         while frontier:
             new = subclasses.get(frontier.pop(), set()) - found
@@ -143,7 +192,20 @@ def test_assertions_respect_domains_and_ranges(graph):
             frontier.extend(new)
         return found
 
-    def types(individual):
+    def types(individual: Node) -> set[Node]:
+        """
+        The classes an individual is asserted (not inferred) to belong to.
+
+        Parameters
+        ----------
+        individual : rdflib.term.Node
+            Subject or object of a property assertion.
+
+        Returns
+        -------
+        set of rdflib.term.Node
+            Every object of an rdf:type triple about the individual.
+        """
         return set(graph.objects(individual, RDF.type))
 
     violations = []
@@ -151,6 +213,8 @@ def test_assertions_respect_domains_and_ranges(graph):
         graph.subjects(RDF.type, OWL.DatatypeProperty)
     ):
         domain = graph.value(prop, RDFS.domain)
+        # Only object properties' ranges are classes; a data property's range is a
+        # datatype (e.g. xsd:integer), which no individual is typed with.
         range_ = (
             graph.value(prop, RDFS.range)
             if (prop, RDF.type, OWL.ObjectProperty) in graph
@@ -164,9 +228,14 @@ def test_assertions_respect_domains_and_ranges(graph):
     assert violations == []
 
 
-def test_reasoner_infers_the_pipeline_order(inferred):
+def test_reasoner_infers_the_pipeline_order(inferred: Graph) -> None:
     """
     Data flow through artifacts and imports becomes feeds and upstreamOf edges.
+
+    Parameters
+    ----------
+    inferred : rdflib.Graph
+        The ontology after OWL RL reasoning (module-scoped fixture).
 
     Notes
     -----
@@ -183,9 +252,14 @@ def test_reasoner_infers_the_pipeline_order(inferred):
     assert (NNFS.BenchmarkReport, NNFS.upstreamOf, NNFS.ClassificationConfig) not in inferred
 
 
-def test_reasoner_infers_stage_membership_and_roles(inferred):
+def test_reasoner_infers_stage_membership_and_roles(inferred: Graph) -> None:
     """
     Modules inherit their package's stage, and module roles are classified.
+
+    Parameters
+    ----------
+    inferred : rdflib.Graph
+        The ontology after OWL RL reasoning (module-scoped fixture).
 
     Notes
     -----
@@ -216,9 +290,14 @@ def test_reasoner_infers_stage_membership_and_roles(inferred):
     assert (NNFS.ClassificationConfig, RDF.type, NNFS.StampedArtifact) not in inferred
 
 
-def test_reasoner_infers_architecture_families(inferred):
+def test_reasoner_infers_architecture_families(inferred: Graph) -> None:
     """
     Architectures are classified by the techniques they use and the base they derive from.
+
+    Parameters
+    ----------
+    inferred : rdflib.Graph
+        The ontology after OWL RL reasoning (module-scoped fixture).
 
     Notes
     -----
@@ -242,9 +321,16 @@ def test_reasoner_infers_architecture_families(inferred):
     ) not in inferred
 
 
-def test_property_characteristics_hold_and_respect_owl_dl(graph, inferred):
+def test_property_characteristics_hold_and_respect_owl_dl(graph: Graph, inferred: Graph) -> None:
     """
     Functional and inverse-functional properties are used consistently and only on simple properties.
+
+    Parameters
+    ----------
+    graph : rdflib.Graph
+        The asserted ontology (module-scoped fixture).
+    inferred : rdflib.Graph
+        The ontology after OWL RL reasoning (module-scoped fixture).
 
     Notes
     -----
@@ -260,6 +346,8 @@ def test_property_characteristics_hold_and_respect_owl_dl(graph, inferred):
     non_simple = set(graph.subjects(RDF.type, OWL.TransitiveProperty)) | set(
         graph.subjects(OWL.propertyChainAxiom, None)
     )
+    # Non-simplicity spreads to super-properties and inverses; iterate to a fixed point
+    # because one pass can expose new parents.
     changed = True
     while changed:
         before = len(non_simple)
@@ -272,6 +360,8 @@ def test_property_characteristics_hold_and_respect_owl_dl(graph, inferred):
     inverse_functional = set(graph.subjects(RDF.type, OWL.InverseFunctionalProperty))
     object_properties = set(graph.subjects(RDF.type, OWL.ObjectProperty))
     assert (functional | inverse_functional) & object_properties & non_simple == set()
+    # Lower bounds, not exact counts (12 and 12 when written): the check below must not pass
+    # vacuously, yet adding a property must not break the test.
     assert len(functional & object_properties) >= 5 and len(inverse_functional) >= 5
 
     for g in (graph, inferred):
@@ -293,9 +383,18 @@ def test_property_characteristics_hold_and_respect_owl_dl(graph, inferred):
         assert (p in transitive) == (q in transitive), (p, q)
 
 
-def test_symmetric_asymmetric_and_irreflexive_properties_hold(graph, inferred):
+def test_symmetric_asymmetric_and_irreflexive_properties_hold(
+    graph: Graph, inferred: Graph
+) -> None:
     """
     Symmetric, asymmetric and irreflexive properties are valid OWL 2 DL and true of the data.
+
+    Parameters
+    ----------
+    graph : rdflib.Graph
+        The asserted ontology (module-scoped fixture).
+    inferred : rdflib.Graph
+        The ontology after OWL RL reasoning (module-scoped fixture).
 
     Notes
     -----
@@ -312,6 +411,7 @@ def test_symmetric_asymmetric_and_irreflexive_properties_hold(graph, inferred):
     asymmetric = set(graph.subjects(RDF.type, OWL.AsymmetricProperty))
     irreflexive = set(graph.subjects(RDF.type, OWL.IrreflexiveProperty))
     assert (asymmetric | irreflexive) & non_simple == set()
+    # A lower bound (48 when written), for the same reason as the functional-property floor.
     assert len(asymmetric) >= 40
 
     for g in (graph, inferred):

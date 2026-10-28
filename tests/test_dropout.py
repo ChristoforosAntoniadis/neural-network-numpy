@@ -3,6 +3,8 @@ Tests for inverted dropout, its place in the network, the trainer's
 evaluation-mode training metric, and the config rules for dropout.
 """
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -18,7 +20,7 @@ from nn_numpy.nn.optimizers import get_optimizer
 # ------------------------------------------------------------------
 
 
-def test_training_mode_drops_about_rate_and_scales_survivors():
+def test_training_mode_drops_about_rate_and_scales_survivors() -> None:
     """
     In training mode about `rate` of the values are zeroed and survivors are scaled by 1 / (1 - rate).
 
@@ -28,6 +30,11 @@ def test_training_mode_drops_about_rate_and_scales_survivors():
     the fraction of zeros is 0.2 within 0.01, every non-zero value equals
     1 / 0.8, and the overall mean stays 1.0 within 0.01 (the expected
     value is preserved).
+
+    With 500 * 200 = 100,000 values, the dropped fraction has standard
+    deviation sqrt(0.2 * 0.8 / 100000) = 0.0013, so abs=0.01 is about 8
+    standard deviations. The mean is 1.25 times the kept fraction, with
+    standard deviation 1.25 * 0.0013 = 0.0016, so abs=0.01 is about 6.
     """
     layer = Dropout(0.2, random_state=np.random.RandomState(0))
     X = np.ones((500, 200))
@@ -42,7 +49,7 @@ def test_training_mode_drops_about_rate_and_scales_survivors():
     assert out.mean() == pytest.approx(1.0, abs=0.01)
 
 
-def test_eval_mode_is_the_identity():
+def test_eval_mode_is_the_identity() -> None:
     """
     In evaluation mode dropout passes values and gradients through unchanged.
 
@@ -60,7 +67,7 @@ def test_eval_mode_is_the_identity():
     np.testing.assert_array_equal(layer.backward(upstream), upstream)
 
 
-def test_backward_reuses_the_forward_mask():
+def test_backward_reuses_the_forward_mask() -> None:
     """
     The backward pass multiplies the gradient by the mask used in the forward pass.
 
@@ -78,20 +85,22 @@ def test_backward_reuses_the_forward_mask():
     out = layer.forward(X)
     grad = layer.backward(upstream)
 
-    np.testing.assert_allclose(out, X * layer.mask)
-    np.testing.assert_allclose(grad, upstream * layer.mask)
+    # The training-mode forward() above set the mask, so it is an array, not None.
+    np.testing.assert_allclose(out, X * layer.mask)  # type: ignore[operator]  # mask set
+    np.testing.assert_allclose(grad, upstream * layer.mask)  # type: ignore[operator]  # mask set
     # Dropped values get no gradient.
     assert np.all(grad[out == 0] == 0)
 
 
-def test_new_mask_for_every_batch():
+def test_new_mask_for_every_batch() -> None:
     """
     Each training-mode forward pass draws a new random mask.
 
     Notes
     -----
     Two forward passes of the same 10x10 array of ones through a
-    Dropout(0.5) layer must give different outputs.
+    Dropout(0.5) layer must give different outputs. Two independent
+    masks of 100 values agree with probability 0.5^100 = 8e-31.
     """
     layer = Dropout(0.5, random_state=np.random.RandomState(0))
     X = np.ones((10, 10))
@@ -99,7 +108,7 @@ def test_new_mask_for_every_batch():
 
 
 @pytest.mark.parametrize("rate", [-0.1, 1.0, 1.5])
-def test_invalid_rate_raises(rate):
+def test_invalid_rate_raises(rate: float) -> None:
     """
     Creating a Dropout layer with a rate outside [0, 1) raises ValueError.
 
@@ -122,7 +131,7 @@ def test_invalid_rate_raises(rate):
 # ------------------------------------------------------------------
 
 
-def build(dropout=None, seed=0):
+def build(dropout: float | None = None, seed: int = 0) -> NeuralNetwork:
     """
     Build a small 3 -> 6 -> 1 classifier, optionally with dropout on the hidden layer.
 
@@ -160,7 +169,7 @@ def build(dropout=None, seed=0):
     return network
 
 
-def test_dropout_is_placed_after_the_activation():
+def test_dropout_is_placed_after_the_activation() -> None:
     """
     A "dropout" layer config adds Dropout right after the hidden activation.
 
@@ -173,7 +182,7 @@ def test_dropout_is_placed_after_the_activation():
     assert names == ["Dense", "ReLU", "Dropout", "Dense", "Sigmoid"]
 
 
-def test_dropout_does_not_change_the_initial_weights():
+def test_dropout_does_not_change_the_initial_weights() -> None:
     """
     Adding dropout leaves the initial Dense weights unchanged.
 
@@ -189,7 +198,7 @@ def test_dropout_does_not_change_the_initial_weights():
         np.testing.assert_array_equal(a, b)
 
 
-def test_dropout_masks_are_reproducible_from_the_seed():
+def test_dropout_masks_are_reproducible_from_the_seed() -> None:
     """
     Two networks built with the same seed draw the same dropout masks.
 
@@ -204,7 +213,7 @@ def test_dropout_masks_are_reproducible_from_the_seed():
     np.testing.assert_array_equal(out_a, out_b)
 
 
-def test_dropout_is_not_trainable():
+def test_dropout_is_not_trainable() -> None:
     """
     Dropout layers are not returned as trainable layers.
 
@@ -222,7 +231,7 @@ def test_dropout_is_not_trainable():
 # ------------------------------------------------------------------
 
 
-def make_data(n=300, seed=0):
+def make_data(n: int = 300, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
     """
     Generate a linearly separable binary classification dataset.
 
@@ -253,7 +262,7 @@ def make_data(n=300, seed=0):
     return X, y
 
 
-def test_trainer_with_dropout_learns_and_predicts_deterministically():
+def test_trainer_with_dropout_learns_and_predicts_deterministically() -> None:
     """
     A dropout network trains well and gives repeatable predictions after training.
 
@@ -261,7 +270,8 @@ def test_trainer_with_dropout_learns_and_predicts_deterministically():
     -----
     A classifier with dropout 0.2 is trained for 30 epochs with AdaBelief
     on 200 samples (50 for validation). Asserted: the evaluation-mode BCE
-    on the last 50 samples is below 0.4, and predicting the same inputs
+    on the last 50 samples is below 0.4 (always predicting 0.5 gives
+    ln 2 = 0.693), and predicting the same inputs
     twice gives identical outputs (dropout is off in evaluation mode).
     """
     X, y = make_data()
@@ -275,7 +285,7 @@ def test_trainer_with_dropout_learns_and_predicts_deterministically():
     np.testing.assert_array_equal(trainer.predict(X[250:]), trainer.predict(X[250:]))
 
 
-def test_score_matches_the_test_metric_from_evaluate():
+def test_score_matches_the_test_metric_from_evaluate() -> None:
     """
     Trainer.score returns the same metric as Trainer.evaluate on the same data.
 
@@ -298,21 +308,23 @@ def test_score_matches_the_test_metric_from_evaluate():
 # ------------------------------------------------------------------
 
 
-def make_config(hidden_extra=None, output_extra=None):
+def make_config(
+    hidden_extra: dict[str, Any] | None = None, output_extra: dict[str, Any] | None = None
+) -> dict[str, Any]:
     """
     Build a minimal valid classification config for ConfigLoader.validate.
 
     Parameters
     ----------
-    hidden_extra : dict or None, default=None
+    hidden_extra : dict[str, Any] or None, default=None
         Extra keys merged into the hidden layer of architecture "A", for
         example {"dropout": 0.2}.
-    output_extra : dict or None, default=None
+    output_extra : dict[str, Any] or None, default=None
         Extra keys merged into the output layer of architecture "A".
 
     Returns
     -------
-    dict
+    dict[str, Any]
         Config with every required top-level, preprocessing and
         experiments key, and one architecture "A": a 2-unit ReLU hidden
         layer and a 1-unit sigmoid output layer, each with its extras.
@@ -348,7 +360,7 @@ def make_config(hidden_extra=None, output_extra=None):
 
 
 @pytest.mark.parametrize("rate", [0, 0.0, 0.2, 0.5])
-def test_config_accepts_valid_dropout(rate):
+def test_config_accepts_valid_dropout(rate: float) -> None:
     """
     The config validator accepts dropout rates in [0, 1) on a hidden layer.
 
@@ -366,7 +378,7 @@ def test_config_accepts_valid_dropout(rate):
 
 
 @pytest.mark.parametrize("rate", [-0.1, 1, 1.0, "0.2", True])
-def test_config_rejects_invalid_dropout(rate):
+def test_config_rejects_invalid_dropout(rate: float | str | bool) -> None:
     """
     The config validator rejects dropout values that are out of range or not numbers.
 
@@ -386,7 +398,7 @@ def test_config_rejects_invalid_dropout(rate):
         ConfigLoader().validate(make_config({"dropout": rate}))
 
 
-def test_config_rejects_dropout_on_the_output_layer():
+def test_config_rejects_dropout_on_the_output_layer() -> None:
     """
     The config validator rejects dropout on the output layer.
 

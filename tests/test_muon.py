@@ -14,7 +14,7 @@ from nn_numpy.nn.optimizers import AdaBelief, Muon, get_optimizer, newton_schulz
 
 
 @pytest.mark.parametrize("shape", [(8, 32), (32, 8), (16, 16), (32, 1)])
-def test_newton_schulz_pushes_singular_values_towards_one(shape):
+def test_newton_schulz_pushes_singular_values_towards_one(shape: tuple[int, int]) -> None:
     """
     The iteration keeps the shape and moves every singular value close to 1.
 
@@ -27,6 +27,8 @@ def test_newton_schulz_pushes_singular_values_towards_one(shape):
     -----
     The quintic coefficients oscillate around 1 rather than converging
     exactly, so the bound is the band Muon is known to produce, [0.6, 1.25].
+    That is a margin around the roughly [0.7, 1.2] band stated in
+    newton_schulz_orthogonalize's docstring.
     """
     matrix = np.random.RandomState(0).normal(size=shape)
     result = newton_schulz_orthogonalize(matrix)
@@ -37,7 +39,7 @@ def test_newton_schulz_pushes_singular_values_towards_one(shape):
     assert singular_values.max() < 1.25
 
 
-def test_newton_schulz_keeps_the_singular_vectors():
+def test_newton_schulz_keeps_the_singular_vectors() -> None:
     """
     The result shares the input's singular vectors (O = U S' V^T for G = U S V^T).
 
@@ -46,6 +48,10 @@ def test_newton_schulz_keeps_the_singular_vectors():
     If both matrices share U and V, then O^T G = V S' S V^T, which is
     symmetric with positive eigenvalues. A rotation or reflection of the
     singular vectors would break that.
+
+    The product is symmetric in exact arithmetic, so only float64 rounding
+    (about 1e-16 relative) separates it from its transpose; atol 1e-10
+    leaves a wide margin.
     """
     matrix = np.random.RandomState(1).normal(size=(6, 10))
     product = newton_schulz_orthogonalize(matrix).T @ matrix
@@ -55,9 +61,14 @@ def test_newton_schulz_keeps_the_singular_vectors():
     assert eigenvalues[-6:].min() > 0  # rank 6: the top 6 eigenvalues are positive
 
 
-def test_newton_schulz_handles_a_zero_matrix():
+def test_newton_schulz_handles_a_zero_matrix() -> None:
     """
     An all-zero input returns zeros instead of dividing by zero.
+
+    Notes
+    -----
+    The Frobenius norm is floored at epsilon (1e-7), so the scaled input
+    is 0 / 1e-7 = 0, and every Newton-Schulz step maps 0 to 0.
     """
     result = newton_schulz_orthogonalize(np.zeros((4, 3)))
 
@@ -70,7 +81,7 @@ def test_newton_schulz_handles_a_zero_matrix():
 # ------------------------------------------------------------------
 
 
-def make_dense_with_grads(fan_in=4, fan_out=6, seed=0):
+def make_dense_with_grads(fan_in: int = 4, fan_out: int = 6, seed: int = 0) -> Dense:
     """
     Build a Dense layer with a bias and give it a backward pass.
 
@@ -101,7 +112,7 @@ def make_dense_with_grads(fan_in=4, fan_out=6, seed=0):
 
 
 @pytest.mark.parametrize("fan_in,fan_out", [(4, 6), (6, 4)])
-def test_first_muon_step_on_weights_matches_the_rule(fan_in, fan_out):
+def test_first_muon_step_on_weights_matches_the_rule(fan_in: int, fan_out: int) -> None:
     """
     The first weight step is learning_rate * shape factor * orthogonalized direction.
 
@@ -114,6 +125,11 @@ def test_first_muon_step_on_weights_matches_the_rule(fan_in, fan_out):
     -----
     On the first step the buffer is (1 - m) * g, so the Nesterov direction
     is (1 - m) * g + m * (1 - m) * g = (1 - m) * (1 + m) * g.
+
+    learning_rate 0.02 and momentum 0.95 are Muon's default arguments. For
+    (4, 6) the shape factor is sqrt(max(1, 6 / 4)) = sqrt(1.5) = 1.2247.
+    Both sides run the same float64 operations, so atol 1e-12 only absorbs
+    rounding.
     """
     layer = make_dense_with_grads(fan_in, fan_out)
     g = layer.dweights.copy()
@@ -128,9 +144,15 @@ def test_first_muon_step_on_weights_matches_the_rule(fan_in, fan_out):
     np.testing.assert_allclose(layer.weights, expected, atol=1e-12)
 
 
-def test_without_nesterov_the_step_uses_the_buffer():
+def test_without_nesterov_the_step_uses_the_buffer() -> None:
     """
     With nesterov=False, the first direction is the buffer (1 - m) * g.
+
+    Notes
+    -----
+    With m = 0.9 the buffer is (1 - 0.9) * g = 0.1 * g. A square (4, 4)
+    layer has shape factor sqrt(max(1, 4 / 4)) = 1, so the step is
+    0.02 * orthogonalize(0.1 * g).
     """
     layer = make_dense_with_grads(4, 4)
     g = layer.dweights.copy()
@@ -142,7 +164,7 @@ def test_without_nesterov_the_step_uses_the_buffer():
     np.testing.assert_allclose(layer.weights, expected, atol=1e-12)
 
 
-def test_the_bias_follows_the_adabelief_rule():
+def test_the_bias_follows_the_adabelief_rule() -> None:
     """
     Muon hands the bias to AdaBelief: three steps give AdaBelief's exact result.
 
@@ -151,6 +173,8 @@ def test_the_bias_follows_the_adabelief_rule():
     Two identical layers receive the same gradients for three steps; one
     is updated by Muon, the other by a plain AdaBelief with the same
     learning rate. Their biases must be identical, while the weights differ.
+    Three steps rather than one exercise AdaBelief's carried state (both
+    moments and the step counter of the bias correction).
     """
     muon_layer = make_dense_with_grads(seed=3)
     adabelief_layer = make_dense_with_grads(seed=3)
@@ -164,17 +188,20 @@ def test_the_bias_follows_the_adabelief_rule():
         muon.update(muon_layer)
         adabelief.update(adabelief_layer)
 
-    np.testing.assert_array_equal(muon_layer.bias, adabelief_layer.bias)
+    np.testing.assert_array_equal(
+        muon_layer.bias,  # type: ignore[arg-type]  # use_bias=True, so never None
+        adabelief_layer.bias,  # type: ignore[arg-type]  # use_bias=True, so never None
+    )
     assert not np.allclose(muon_layer.weights, adabelief_layer.weights)
 
 
-def test_batch_norm_parameters_use_the_fallback():
+def test_batch_norm_parameters_use_the_fallback() -> None:
     """
     A BatchNorm layer (gamma and beta, no weights) is updated exactly like AdaBelief.
     """
     rng = np.random.RandomState(5)
     X, upstream = rng.normal(size=(8, 3)), rng.normal(size=(8, 3))
-    layers = []
+    layers: list[BatchNorm] = []
     for optimizer in (Muon(learning_rate=0.05), AdaBelief(learning_rate=0.05)):
         bn = BatchNorm(3)
         bn.forward(X)
@@ -187,7 +214,7 @@ def test_batch_norm_parameters_use_the_fallback():
         np.testing.assert_array_equal(param, adabelief_bn.get_params()[name])
 
 
-def test_get_optimizer_builds_muon_with_the_fixed_settings():
+def test_get_optimizer_builds_muon_with_the_fixed_settings() -> None:
     """
     "muon" (any case) builds Muon with momentum 0.95, Nesterov and 5 steps.
     """
@@ -202,7 +229,7 @@ def test_get_optimizer_builds_muon_with_the_fixed_settings():
 
 
 @pytest.mark.parametrize("shape", [(8, 32), (32, 8), (32, 1)])
-def test_weights_match_pytorch_muon(shape):
+def test_weights_match_pytorch_muon(shape: tuple[int, int]) -> None:
     """
     Three Muon steps match torch.optim.Muon on the same gradients.
 

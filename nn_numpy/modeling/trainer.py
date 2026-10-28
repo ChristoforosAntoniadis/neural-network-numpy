@@ -5,6 +5,13 @@ Defines `Trainer`, which runs mini-batch gradient descent on a
 `NeuralNetwork` with a given loss and optimizer, records the loss history,
 optionally stops early on a validation-loss plateau (restoring the best
 checkpoint), and evaluates or scores the trained model.
+
+Input: a NeuralNetwork, a loss object, an optimizer, and NumPy arrays for the
+training and validation splits.
+
+Output: the trained network (updated in place, best checkpoint restored), the
+training history dictionary from fit() (also kept as Trainer.history), and
+the metric dictionary from evaluate(). Nothing is written to disk.
 """
 
 from collections.abc import Iterator
@@ -89,13 +96,16 @@ class Trainer:
             overfitting signal.
         patience : int, default=10
             Number of consecutive epochs allowed without a meaningful
-            validation-loss improvement.
+            validation-loss improvement. The experiments pass the configs'
+            value (also 10); no recorded justification for 10.
         min_delta : float, default=0.0
             Minimum loss decrease required to count as a meaningful
-            improvement for both training loss and validation loss.
+            improvement for both training loss and validation loss. 0 counts
+            any decrease; the experiments pass the configs' value.
         min_epochs_before_early_stop : int, default=0
             Minimum number of completed epochs required before early
-            stopping is allowed to terminate training.
+            stopping is allowed to terminate training. 0 disables the guard;
+            the experiments pass the configs' value.
         random_seed : int, default=RANDOM_SEED
             Seed for shuffling the training data each epoch.
         max_grad_norm : float or None, default=None
@@ -383,9 +393,12 @@ class Trainer:
         y_val : numpy.ndarray of shape (n_val, 1)
             Validation targets, same dtype convention as y_train.
         epochs : int, default=100
-            Maximum number of training epochs.
+            Maximum number of training epochs. The experiments pass the
+            configs' value (also 100); no recorded justification for 100.
         batch_size : int, default=32
-            Number of samples per mini-batch.
+            Number of samples per mini-batch. Every experiment passes the
+            grid's batch size, so this default is never used in the results;
+            no recorded justification for 32.
         verbose : bool, default=True
             Whether to print per-epoch progress (and early-stopping status).
 
@@ -514,7 +527,10 @@ class Trainer:
                 for layer in self.network.get_trainable_layers():
                     self.optimizer.update(layer)
 
-            # Average batch losses to get one training loss for the epoch
+            # Average batch losses to get one training loss for the epoch.
+            # The mean is unweighted, so a smaller last batch counts as much as
+            # a full one; that is fine for a monitoring curve, and model
+            # selection uses the validation loss, not this value.
             train_loss = float(np.mean(batch_losses))
 
             # Validation pass after the epoch finishes, in evaluation mode so

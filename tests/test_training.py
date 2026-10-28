@@ -11,7 +11,7 @@ from nn_numpy.nn.network import NeuralNetwork
 from nn_numpy.nn.optimizers import get_optimizer
 
 
-def make_classification_data(n=200, seed=0):
+def make_classification_data(n: int = 200, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
     """
     Generate a linearly separable 2-feature binary classification problem.
 
@@ -42,7 +42,7 @@ def make_classification_data(n=200, seed=0):
     return X, y
 
 
-def build_classifier():
+def build_classifier() -> NeuralNetwork:
     """
     Build a small 2 -> 8 -> 1 binary classifier.
 
@@ -86,7 +86,7 @@ def build_classifier():
         ("muon", 0.05),
     ],
 )
-def test_optimizer_reduces_loss(optimizer_name, learning_rate):
+def test_optimizer_reduces_loss(optimizer_name: str, learning_rate: float) -> None:
     """
     Each optimizer lowers the training loss on a simple problem.
 
@@ -121,7 +121,7 @@ def test_optimizer_reduces_loss(optimizer_name, learning_rate):
     assert final_loss < 0.8 * initial_loss
 
 
-def test_unknown_optimizer_raises():
+def test_unknown_optimizer_raises() -> None:
     """
     Asking for an unsupported optimizer name raises ValueError.
 
@@ -133,7 +133,7 @@ def test_unknown_optimizer_raises():
         get_optimizer("rmsprop", 0.01)
 
 
-def test_trainer_fits_and_evaluates():
+def test_trainer_fits_and_evaluates() -> None:
     """
     Trainer.fit records a decreasing loss history and Trainer.evaluate reports a good test BCE.
 
@@ -168,7 +168,7 @@ def test_trainer_fits_and_evaluates():
     assert results["test_metric"] < 0.3  # well below ln(2) ~= 0.693, the BCE of a coin flip
 
 
-def test_a_run_that_reaches_max_epochs_records_why_it_ended():
+def test_a_run_that_reaches_max_epochs_records_why_it_ended() -> None:
     """
     A run that uses every epoch reports stop_reason "max_epochs" and no overfitting.
 
@@ -197,7 +197,7 @@ def test_a_run_that_reaches_max_epochs_records_why_it_ended():
     assert not history["diverged"] and not history["stopped_early"]
 
 
-def test_early_stopping_records_the_overfitting_signature():
+def test_early_stopping_records_the_overfitting_signature() -> None:
     """
     A run whose validation loss rises while training loss falls is stopped
     as overfitting.
@@ -211,6 +211,8 @@ def test_early_stopping_records_the_overfitting_signature():
     Asserted: stop_reason is "early_stopping", best_epoch is 1, 4 epochs
     ran, and overfitting_epochs counts the 3 epochs in which training
     improved while validation did not.
+
+    By hand: epochs ran = best epoch 1 + patience 3 = 4.
     """
     X, y = make_classification_data(n=100)
     trainer = Trainer(

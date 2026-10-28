@@ -5,6 +5,11 @@ Each activation class has forward(x), which applies the function to every
 element, and backward(grad_output), which multiplies the incoming gradient
 by the function's derivative (chain rule). Activations have no trainable
 parameters; they only cache what backward() needs from forward().
+
+Input: NumPy arrays from the previous layer (forward) and upstream gradients
+(backward).
+
+Output: arrays of the same shape. Nothing is written to disk.
 """
 
 import numpy as np
@@ -60,7 +65,7 @@ class ReLU:
         # We store the input from the forward pass because
         # the backward pass needs to know which values were
         # positive and which were not.
-        self.input = None
+        self.input: np.ndarray = None  # type: ignore[assignment]  # set in forward()
 
     def forward(self, x: np.ndarray) -> np.ndarray:
         """
@@ -182,7 +187,7 @@ class Sigmoid:
         # Store the sigmoid output from the forward pass.
         # This is useful because the derivative can be written as:
         # sigmoid(x) * (1 - sigmoid(x))
-        self.output = None
+        self.output: np.ndarray = None  # type: ignore[assignment]  # set in forward()
 
     def forward(self, x: np.ndarray) -> np.ndarray:
         """
@@ -211,6 +216,10 @@ class Sigmoid:
         # Clip very large or very small values to avoid numerical overflow
         # inside exp(). This does not change the intended behavior in a
         # meaningful way, but makes computation safer.
+        # Why 500: exp() overflows float64 above about 709.8, and exp(500) is
+        # about 1.4e217, safely below that. sigmoid(500) already rounds to 1.0
+        # and sigmoid(-500) is about 7e-218, so the clip changes nothing that
+        # float64 can represent in the output.
         x_clipped = np.clip(x, -500, 500)
 
         # Apply the sigmoid formula
@@ -299,7 +308,7 @@ class Tanh:
         """
         # Store tanh output during forward pass.
         # This makes the derivative easy to compute later.
-        self.output = None
+        self.output: np.ndarray = None  # type: ignore[assignment]  # set in forward()
 
     def forward(self, x: np.ndarray) -> np.ndarray:
         """

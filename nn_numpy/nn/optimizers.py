@@ -6,6 +6,11 @@ and Muon. Each has update(layer), which reads layer.get_params() and
 layer.get_grads() and modifies the parameter arrays in place. Stateful
 optimizers keep their state per parameter, keyed by (id(layer), name).
 get_optimizer() builds an optimizer from a config string.
+
+Input: layers exposing get_params() / get_grads(), and a learning rate.
+
+Output: the layers' parameter arrays, updated in place. Nothing is written
+to disk.
 """
 
 import numpy as np
@@ -48,7 +53,9 @@ class SGD:
         Parameters
         ----------
         learning_rate : float, default=0.01
-            Step size used for each weight update.
+            Step size used for each weight update. Every experiment passes
+            the grid's learning rate, so this default is never used in the
+            results.
 
         Returns
         -------
@@ -149,9 +156,12 @@ class MomentumSGD:
         Parameters
         ----------
         learning_rate : float, default=0.01
-            Step size used for the weight update.
+            Step size used for the weight update. Every experiment passes
+            the grid's learning rate, so this default is never used in the
+            results.
         beta : float, default=0.9
-            Momentum coefficient. The project uses beta = 0.9.
+            Momentum coefficient. The project uses beta = 0.9 (fixed, not
+            tuned; no recorded justification for the value).
 
         Returns
         -------
@@ -173,7 +183,7 @@ class MomentumSGD:
         # Store one velocity array per parameter.
         # The key is (id(layer), parameter name), so each layer's weights
         # and bias keep their own momentum state independently.
-        self.velocity = {}
+        self.velocity: dict[tuple[int, str], np.ndarray] = {}
 
     def update(self, layer: Dense | BatchNorm) -> None:
         """
@@ -286,13 +296,19 @@ class AdaBelief:
         Parameters
         ----------
         learning_rate : float, default=0.001
-            Step size used for the weight update.
+            Step size used for the weight update. Every experiment passes
+            the grid's learning rate, so this default is never used in the
+            results.
         beta1 : float, default=0.9
             Exponential decay rate for the first moment.
         beta2 : float, default=0.999
             Exponential decay rate for the second moment.
         epsilon : float, default=1e-8
             Small constant for numerical stability.
+
+            0.001, 0.9, 0.999 and 1e-8 are Adam's recommended defaults
+            (Kingma & Ba, 2015, Algorithm 1); AdaBelief keeps Adam's beta
+            values.
 
         Returns
         -------
@@ -322,16 +338,16 @@ class AdaBelief:
 
         # First moment estimate for each parameter.
         # This stores the running average of gradients.
-        self.m = {}
+        self.m: dict[tuple[int, str], np.ndarray] = {}
 
         # Second moment estimate for each parameter.
         # In AdaBelief, this stores the running average of
         # squared belief errors: (gradient - first_moment)^2
-        self.s = {}
+        self.s: dict[tuple[int, str], np.ndarray] = {}
 
         # Time step for each parameter.
         # Needed for bias correction because m and s start at zero.
-        self.t = {}
+        self.t: dict[tuple[int, str], int] = {}
 
     def update(self, layer: Dense | BatchNorm) -> None:
         """
@@ -447,10 +463,12 @@ def newton_schulz_orthogonalize(
         2-D array of shape (rows, cols), float64, e.g. a momentum buffer
         for a Dense layer's weights.
     steps : int, default=5
-        Number of Newton-Schulz iterations.
+        Number of Newton-Schulz iterations; PyTorch's and Keras's Muon
+        default.
     epsilon : float, default=1e-7
         Lower bound for the Frobenius norm used to scale the input, so an
-        all-zero matrix does not divide by zero.
+        all-zero matrix does not divide by zero. 1e-7 is the eps of
+        PyTorch's and Keras's Muon.
 
     Returns
     -------
@@ -545,13 +563,19 @@ class Muon:
         Parameters
         ----------
         learning_rate : float, default=0.02
-            Base step size, shared with the AdaBelief fallback.
+            Base step size, shared with the AdaBelief fallback. Not a library
+            default (PyTorch and Keras use 0.001) and no recorded
+            justification; every experiment passes the grid's learning rate,
+            so this default is never used in the results.
         momentum : float, default=0.95
-            Momentum coefficient for the weight matrices.
+            Momentum coefficient for the weight matrices. PyTorch's and
+            Keras's Muon default.
         nesterov : bool, default=True
-            Use Nesterov momentum for the weight matrices.
+            Use Nesterov momentum for the weight matrices. PyTorch's and
+            Keras's Muon default.
         ns_steps : int, default=5
-            Number of Newton-Schulz iterations per step.
+            Number of Newton-Schulz iterations per step. PyTorch's and
+            Keras's Muon default.
 
         Returns
         -------
@@ -573,7 +597,7 @@ class Muon:
         self.momentum = momentum
         self.nesterov = nesterov
         self.ns_steps = ns_steps
-        self.buffers = {}
+        self.buffers: dict[tuple[int, str], np.ndarray] = {}
         self.fallback = AdaBelief(learning_rate=learning_rate)
 
     def update(self, layer: Dense | BatchNorm) -> None:
@@ -688,7 +712,7 @@ def get_optimizer(name: str, learning_rate: float) -> SGD | MomentumSGD | AdaBel
         return SGD(learning_rate=learning_rate)
 
     elif name in ["momentum", "momentumsgd", "momentum_sgd"]:
-        # Fixed momentum coefficient
+        # Fixed momentum coefficient (not tuned; no recorded justification for 0.9)
         return MomentumSGD(learning_rate=learning_rate, beta=0.9)
 
     elif name == "adabelief":
@@ -696,6 +720,7 @@ def get_optimizer(name: str, learning_rate: float) -> SGD | MomentumSGD | AdaBel
         # beta1 = 0.9
         # beta2 = 0.999
         # epsilon = 1e-8
+        # Adam's recommended defaults (Kingma & Ba, 2015), whose betas AdaBelief keeps.
         return AdaBelief(learning_rate=learning_rate, beta1=0.9, beta2=0.999, epsilon=1e-8)
 
     elif name == "muon":

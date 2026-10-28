@@ -4,6 +4,8 @@ constant-prediction baseline, config validation, and the multi-seed
 analysis helpers.
 """
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 import pytest
@@ -25,7 +27,7 @@ from nn_numpy.nn.network import NeuralNetwork
 # ------------------------------------------------------------------
 
 
-def test_split_changes_with_the_seed():
+def test_split_changes_with_the_seed() -> None:
     """
     Different seeds give different train/validation/test splits.
 
@@ -33,6 +35,7 @@ def test_split_changes_with_the_seed():
     -----
     A 100-row dataframe is split (stratified on "class") with seeds 42
     and 43; the sets of "x" values in the two training splits must differ.
+    The two seeds carry no meaning; any two distinct seeds would do.
     """
     df = pd.DataFrame({"x": np.arange(100), "class": np.arange(100) % 2})
     train_a, _, _ = train_val_test_split(df, stratify_col="class", random_seed=42)
@@ -40,7 +43,7 @@ def test_split_changes_with_the_seed():
     assert set(train_a["x"]) != set(train_b["x"])
 
 
-def test_network_initialization_follows_the_seed():
+def test_network_initialization_follows_the_seed() -> None:
     """
     Network weight initialization is reproducible from the seed and changes with it.
 
@@ -65,7 +68,7 @@ def test_network_initialization_follows_the_seed():
     assert not np.array_equal(a.layers[0].weights, c.layers[0].weights)
 
 
-def test_get_seeds_defaults_to_the_project_seed():
+def test_get_seeds_defaults_to_the_project_seed() -> None:
     """
     get_seeds falls back to [RANDOM_SEED] and otherwise returns the configured seeds.
 
@@ -83,7 +86,9 @@ def test_get_seeds_defaults_to_the_project_seed():
 # ------------------------------------------------------------------
 
 
-def splits(y_train, y_test):
+def splits(
+    y_train: list[float], y_test: list[float]
+) -> tuple[None, np.ndarray, None, None, None, np.ndarray]:
     """
     Build a dataset-splits tuple that holds only training and test targets.
 
@@ -96,7 +101,7 @@ def splits(y_train, y_test):
 
     Returns
     -------
-    tuple
+    tuple[None, numpy.ndarray, None, None, None, numpy.ndarray]
         (None, y_train, None, None, None, y_test), where both targets are
         numpy.ndarray of shape (n, 1), dtype float64. This matches the
         (X_train, y_train, X_val, y_val, X_test, y_test) layout that
@@ -114,7 +119,7 @@ def splits(y_train, y_test):
     return None, y_train, None, None, None, y_test
 
 
-def test_regression_baseline_predicts_the_training_mean():
+def test_regression_baseline_predicts_the_training_mean() -> None:
     """
     The regression baseline predicts the training mean and is scored with MSE.
 
@@ -124,12 +129,13 @@ def test_regression_baseline_predicts_the_training_mean():
     must return 5.0, the MSE of always predicting 2.
     """
     # Training mean is 2; test targets 1 and 5 -> MSE = ((1-2)^2 + (5-2)^2) / 2 = 5
-    assert constant_prediction_baseline("regression", splits([1, 2, 3], [1, 5])) == pytest.approx(
-        5.0
-    )
+    assert constant_prediction_baseline(
+        "regression",
+        splits([1, 2, 3], [1, 5]),  # type: ignore[arg-type]  # only y_train / y_test are read
+    ) == pytest.approx(5.0)
 
 
-def test_classification_baseline_predicts_the_training_proportion():
+def test_classification_baseline_predicts_the_training_proportion() -> None:
     """
     The classification baseline predicts the training class-1 proportion and is scored with BCE.
 
@@ -137,12 +143,13 @@ def test_classification_baseline_predicts_the_training_proportion():
     -----
     With training labels [1, 0, 0, 0] the constant prediction is 0.25.
     For test labels [1, 0] the baseline must return
-    -(log(0.25) + log(0.75)) / 2.
+    -(log(0.25) + log(0.75)) / 2 = (1.3863 + 0.2877) / 2 = 0.8370.
     """
     # Training proportion 0.25; BCE of predicting 0.25 for labels [1, 0]
     expected = -(np.log(0.25) + np.log(0.75)) / 2
     assert constant_prediction_baseline(
-        "classification", splits([1, 0, 0, 0], [1, 0])
+        "classification",
+        splits([1, 0, 0, 0], [1, 0]),  # type: ignore[arg-type]  # only y_train / y_test are read
     ) == pytest.approx(expected)
 
 
@@ -151,19 +158,19 @@ def test_classification_baseline_predicts_the_training_proportion():
 # ------------------------------------------------------------------
 
 
-def make_config(**experiments_extra):
+def make_config(**experiments_extra: Any) -> dict[str, Any]:
     """
     Build a minimal valid classification config for ConfigLoader.validate.
 
     Parameters
     ----------
-    **experiments_extra : dict
+    **experiments_extra : Any
         Extra keys merged into the "experiments" block, for example
         `seeds=[42, 43]`.
 
     Returns
     -------
-    dict
+    dict[str, Any]
         Config with every required top-level, preprocessing and
         experiments key (plus `experiments_extra`), and one architecture
         "A" made of a single 1-unit sigmoid Dense layer.
@@ -194,7 +201,7 @@ def make_config(**experiments_extra):
     }
 
 
-def test_config_accepts_seeds():
+def test_config_accepts_seeds() -> None:
     """
     The config validator accepts a list of distinct non-negative integer seeds.
 
@@ -206,7 +213,7 @@ def test_config_accepts_seeds():
 
 
 @pytest.mark.parametrize("seeds", [[], [42, 42], [-1], [1.5], [True], "42", 42])
-def test_config_rejects_invalid_seeds(seeds):
+def test_config_rejects_invalid_seeds(seeds: list[Any] | str | int) -> None:
     """
     The config validator rejects invalid "seeds" values.
 
@@ -230,7 +237,7 @@ def test_config_rejects_invalid_seeds(seeds):
 # ------------------------------------------------------------------
 
 
-def run(val, test, baseline=10.0, diverged=False):
+def run(val: float, test: float, baseline: float = 10.0, diverged: bool = False) -> dict[str, Any]:
     """
     Build a minimal experiment-run dictionary for the analysis helpers.
 
@@ -247,7 +254,7 @@ def run(val, test, baseline=10.0, diverged=False):
 
     Returns
     -------
-    dict
+    dict[str, Any]
         {"best_val_loss": val, "test_metric": test,
         "baseline_test_metric": baseline, "diverged": diverged}.
 
@@ -264,7 +271,7 @@ def run(val, test, baseline=10.0, diverged=False):
     }
 
 
-def test_mean_pm_std_uses_the_sample_standard_deviation():
+def test_mean_pm_std_uses_the_sample_standard_deviation() -> None:
     """
     mean_pm_std formats "mean ± sample std" and handles one or zero values.
 
@@ -273,13 +280,16 @@ def test_mean_pm_std_uses_the_sample_standard_deviation():
     [1, 2, 3] must give "2.00 ± 1.00" (the sample standard deviation,
     dividing by n - 1, is 1.0). A single value must give a standard
     deviation of 0.0, and an empty list must give "-".
+
+    By hand: mean 2, sample std sqrt(((1 - 2)^2 + 0 + (3 - 2)^2) / (3 - 1))
+    = sqrt(1) = 1.
     """
     assert mean_pm_std([1.0, 2.0, 3.0], digits=2) == "2.00 ± 1.00"
     assert mean_pm_std([4.0], digits=1) == "4.0 ± 0.0"
     assert mean_pm_std([]) == "-"
 
 
-def test_selection_uses_validation_loss_and_skips_diverged_runs():
+def test_selection_uses_validation_loss_and_skips_diverged_runs() -> None:
     """
     select_by_validation picks the lowest validation loss among runs that did not diverge.
 
@@ -294,7 +304,7 @@ def test_selection_uses_validation_loss_and_skips_diverged_runs():
     assert select_by_validation([run(0.1, 1.0, diverged=True)]) is None
 
 
-def test_error_removed_and_baseline_failure():
+def test_error_removed_and_baseline_failure() -> None:
     """
     error_removed and fails_baseline compare a run's test metric with the baseline.
 
@@ -309,7 +319,7 @@ def test_error_removed_and_baseline_failure():
     assert not fails_baseline(run(val=0, test=9.9, baseline=10.0))
 
 
-def test_derived_metrics_keep_the_checkpoint_validation_loss():
+def test_derived_metrics_keep_the_checkpoint_validation_loss() -> None:
     """
     add_derived_metrics keeps the saved best_val_loss instead of the history minimum.
 
@@ -333,7 +343,7 @@ def test_derived_metrics_keep_the_checkpoint_validation_loss():
     assert missing["best_val_loss"] == 0.4
 
 
-def test_derived_metrics_add_the_gap_and_fill_in_how_old_runs_ended():
+def test_derived_metrics_add_the_gap_and_fill_in_how_old_runs_ended() -> None:
     """
     add_derived_metrics adds the generalization gap and a stop reason for old results.
 
@@ -343,6 +353,8 @@ def test_derived_metrics_add_the_gap_and_fill_in_how_old_runs_ended():
     Runs from results files written before stop_reason existed get it from
     their "diverged" / "stopped_early" flags, and overfitting_epochs None
     (not recorded); a run that records them keeps its values.
+
+    By hand: generalization_gap = 0.3 - 0.1 = 0.2.
     """
     from nn_numpy.analysis import add_derived_metrics
 
@@ -368,7 +380,7 @@ def test_derived_metrics_add_the_gap_and_fill_in_how_old_runs_ended():
     assert old_full["overfitting_epochs"] is None
 
 
-def test_stopping_table_counts_stop_reasons_and_overfitting():
+def test_stopping_table_counts_stop_reasons_and_overfitting() -> None:
     """
     format_stopping_seed_table counts how runs ended and which early stops overfitted.
 
@@ -378,10 +390,37 @@ def test_stopping_table_counts_stop_reasons_and_overfitting():
     signature), one that ran to the epoch limit and one that diverged. The
     A1 row must read "2 / 1 / 1" and "1 of 2", and the gap column must be
     the mean ± std of the gaps of the run selected per seed (0.1 and 0.3).
+
+    By hand: seed 42 selects the 0.2 run (gap 0.1), seed 43 the 0.3 run
+    (gap 0.3; its NaN run diverged). Mean (0.1 + 0.3) / 2 = 0.20, sample
+    std sqrt((0.1^2 + 0.1^2) / (2 - 1)) = 0.1414, so "0.20 ± 0.14".
     """
     from nn_numpy.analysis import format_stopping_seed_table
 
-    def a1(seed, val, reason, overfit, gap):
+    def a1(seed: int, val: float, reason: str, overfit: int, gap: float) -> dict[str, Any]:
+        """
+        Build one A1 run record for the stopping table.
+
+        Parameters
+        ----------
+        seed : int
+            Seed of the run.
+        val : float
+            Best validation loss (NaN for the diverged run).
+        reason : str
+            stop_reason: "early_stopping", "max_epochs" or "diverged".
+        overfit : int
+            overfitting_epochs at the stop.
+        gap : float
+            generalization_gap of the run.
+
+        Returns
+        -------
+        dict[str, Any]
+            The keys of run() plus architecture, seed, stop_reason,
+            overfitting_epochs and generalization_gap; diverged is True
+            exactly when reason is "diverged".
+        """
         return {
             **run(val=val, test=1.0, diverged=reason == "diverged"),
             "architecture": "A1",

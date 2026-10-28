@@ -79,6 +79,7 @@ def main(makefile_path: str) -> None:
     with open(makefile_path, encoding="utf-8") as f:
         targets = documented_targets(f.read())
 
+    # default=0 keeps a Makefile without documented targets from raising ValueError.
     width = max((len(name) for name, _ in targets), default=0)
     print("Available commands:\n")
     for name, description in targets:

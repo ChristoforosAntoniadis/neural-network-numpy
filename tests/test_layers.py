@@ -4,6 +4,8 @@ and for the code that must handle every trainable parameter (optimizers,
 early-stopping checkpoints, config validation).
 """
 
+from typing import Any
+
 import numpy as np
 import pytest
 
@@ -19,7 +21,7 @@ from nn_numpy.nn.optimizers import get_optimizer
 # ------------------------------------------------------------------
 
 
-def test_bias_is_added_to_every_sample():
+def test_bias_is_added_to_every_sample() -> None:
     """
     A Dense layer with bias adds the same bias row to every sample.
 
@@ -30,13 +32,13 @@ def test_bias_is_added_to_every_sample():
     the rows).
     """
     layer = Dense(3, 2, random_state=np.random.RandomState(0), use_bias=True)
-    layer.bias[:] = [[1.0, -2.0]]
+    layer.bias[:] = [[1.0, -2.0]]  # type: ignore[index]  # use_bias=True
     X = np.random.RandomState(1).normal(size=(4, 3))
 
     np.testing.assert_allclose(layer.forward(X), X @ layer.weights + [[1.0, -2.0]])
 
 
-def test_bias_gradient_is_batch_sum_of_upstream_gradient():
+def test_bias_gradient_is_batch_sum_of_upstream_gradient() -> None:
     """
     The bias gradient is the upstream gradient summed over the batch.
 
@@ -53,10 +55,13 @@ def test_bias_gradient_is_batch_sum_of_upstream_gradient():
     layer.forward(X)
     layer.backward(upstream)
 
-    np.testing.assert_allclose(layer.dbias, upstream.sum(axis=0, keepdims=True))
+    np.testing.assert_allclose(
+        layer.dbias,  # type: ignore[arg-type]  # use_bias=True, so dbias is an array
+        upstream.sum(axis=0, keepdims=True),
+    )
 
 
-def test_bias_free_layer_exposes_only_weights():
+def test_bias_free_layer_exposes_only_weights() -> None:
     """
     A Dense layer without bias exposes only "weights" as parameter and gradient.
 
@@ -75,7 +80,7 @@ def test_bias_free_layer_exposes_only_weights():
 # ------------------------------------------------------------------
 
 
-def test_default_init_matches_original_scheme():
+def test_default_init_matches_original_scheme() -> None:
     """
     The default initialization reproduces the original N(0, 0.1^2) draw exactly.
 
@@ -90,7 +95,7 @@ def test_default_init_matches_original_scheme():
     np.testing.assert_array_equal(layer.weights, expected)
 
 
-def test_enabling_bias_does_not_change_the_weights():
+def test_enabling_bias_does_not_change_the_weights() -> None:
     """
     Turning on the bias does not change the initial weights.
 
@@ -103,7 +108,10 @@ def test_enabling_bias_does_not_change_the_weights():
     plain = Dense(4, 3, random_state=np.random.RandomState(42))
     biased = Dense(4, 3, random_state=np.random.RandomState(42), use_bias=True)
     np.testing.assert_array_equal(plain.weights, biased.weights)
-    np.testing.assert_array_equal(biased.bias, np.zeros((1, 3)))
+    np.testing.assert_array_equal(
+        biased.bias,  # type: ignore[arg-type]  # use_bias=True, so bias is an array
+        np.zeros((1, 3)),
+    )
 
 
 @pytest.mark.parametrize(
@@ -114,7 +122,7 @@ def test_enabling_bias_does_not_change_the_weights():
         ("normal", 0.1),
     ],
 )
-def test_init_standard_deviation(init, expected_std):
+def test_init_standard_deviation(init: str, expected_std: float) -> None:
     """
     Each initialization scheme draws weights with the expected spread.
 
@@ -132,13 +140,18 @@ def test_init_standard_deviation(init, expected_std):
     With 120,000 weights the sample statistics are close to the true
     ones, so the test asserts that the mean is within 5% of expected_std
     from zero and the standard deviation is within 2% of expected_std.
+
+    The sample mean has standard error expected_std / sqrt(120000) =
+    0.0029 * expected_std, so 5% is about 17 standard errors. The sample
+    standard deviation has relative standard error 1 / sqrt(2 * 120000)
+    = 0.0020, so 2% is about 10.
     """
     layer = Dense(400, 300, random_state=np.random.RandomState(0), init=init)
     assert abs(layer.weights.mean()) < 0.05 * expected_std
     assert layer.weights.std() == pytest.approx(expected_std, rel=0.02)
 
 
-def test_unknown_init_raises():
+def test_unknown_init_raises() -> None:
     """
     An unknown initialization name raises ValueError.
 
@@ -156,7 +169,7 @@ def test_unknown_init_raises():
 
 
 @pytest.mark.parametrize("optimizer_name", ["sgd", "momentum", "adabelief", "muon"])
-def test_optimizer_updates_weights_and_bias(optimizer_name):
+def test_optimizer_updates_weights_and_bias(optimizer_name: str) -> None:
     """
     Every optimizer updates both the weights and the bias of a Dense layer.
 
@@ -177,14 +190,14 @@ def test_optimizer_updates_weights_and_bias(optimizer_name):
     layer.backward(np.ones((5, 2)))
 
     weights_before = layer.weights.copy()
-    bias_before = layer.bias.copy()
+    bias_before = layer.bias.copy()  # type: ignore[union-attr]  # use_bias=True
     get_optimizer(optimizer_name, 0.1).update(layer)
 
     assert not np.allclose(layer.weights, weights_before)
-    assert not np.allclose(layer.bias, bias_before)
+    assert not np.allclose(layer.bias, bias_before)  # type: ignore[arg-type]  # use_bias=True
 
 
-def test_sgd_bias_update_is_learning_rate_times_gradient():
+def test_sgd_bias_update_is_learning_rate_times_gradient() -> None:
     """
     SGD updates the bias by b <- b - learning_rate * dL/db.
 
@@ -197,11 +210,11 @@ def test_sgd_bias_update_is_learning_rate_times_gradient():
     layer = Dense(3, 2, random_state=np.random.RandomState(0), use_bias=True)
     layer.forward(np.random.RandomState(1).normal(size=(5, 3)))
     layer.backward(np.random.RandomState(2).normal(size=(5, 2)))
-    expected = layer.bias - 0.1 * layer.dbias
+    expected = layer.bias - 0.1 * layer.dbias  # type: ignore[operator]  # use_bias=True
 
     get_optimizer("sgd", 0.1).update(layer)
 
-    np.testing.assert_allclose(layer.bias, expected)
+    np.testing.assert_allclose(layer.bias, expected)  # type: ignore[arg-type]  # use_bias=True
 
 
 # ------------------------------------------------------------------
@@ -209,7 +222,7 @@ def test_sgd_bias_update_is_learning_rate_times_gradient():
 # ------------------------------------------------------------------
 
 
-def test_model_state_round_trip_includes_bias():
+def test_model_state_round_trip_includes_bias() -> None:
     """
     Trainer checkpoints save and restore the bias as well as the weights.
 
@@ -232,14 +245,22 @@ def test_model_state_round_trip_includes_bias():
     trainer = Trainer(network, get_loss("bce"), get_optimizer("sgd", 0.1), "classification")
 
     saved = trainer._get_model_state()
+    # get_trainable_layers() is typed list[Dense | BatchNorm], but this network has only
+    # Dense layers, all with use_bias=True, hence the ignores below.
     for layer in network.get_trainable_layers():
-        layer.weights += 1.0
-        layer.bias += 1.0
+        layer.weights += 1.0  # type: ignore[union-attr]  # Dense only
+        layer.bias += 1.0  # type: ignore[union-attr, operator]  # Dense with bias only
     trainer._set_model_state(saved)
 
     for layer, state in zip(network.get_trainable_layers(), saved):
-        np.testing.assert_array_equal(layer.weights, state["params"]["weights"])
-        np.testing.assert_array_equal(layer.bias, state["params"]["bias"])
+        np.testing.assert_array_equal(
+            layer.weights,  # type: ignore[union-attr]  # Dense only
+            state["params"]["weights"],
+        )
+        np.testing.assert_array_equal(
+            layer.bias,  # type: ignore[union-attr, arg-type]  # Dense with bias only
+            state["params"]["bias"],
+        )
 
 
 # ------------------------------------------------------------------
@@ -247,19 +268,19 @@ def test_model_state_round_trip_includes_bias():
 # ------------------------------------------------------------------
 
 
-def make_config(**layer_extra):
+def make_config(**layer_extra: Any) -> dict[str, Any]:
     """
     Build a minimal valid classification config for ConfigLoader.validate.
 
     Parameters
     ----------
-    **layer_extra : dict
+    **layer_extra : Any
         Extra keys merged into the single layer of architecture "A", for
         example `use_bias=True` or `init="he"`.
 
     Returns
     -------
-    dict
+    dict[str, Any]
         Config with every required top-level, preprocessing and
         experiments key, and one architecture "A" made of a single 1-unit
         sigmoid Dense layer plus `layer_extra`.
@@ -301,13 +322,13 @@ def make_config(**layer_extra):
         {"init": "Xavier"},
     ],
 )
-def test_config_accepts_valid_bias_and_init(layer_extra):
+def test_config_accepts_valid_bias_and_init(layer_extra: dict[str, Any]) -> None:
     """
     The config validator accepts valid "use_bias" and "init" settings.
 
     Parameters
     ----------
-    layer_extra : dict
+    layer_extra : dict[str, Any]
         Layer settings to add: none, use_bias True or False, init "he",
         or init "Xavier" (the init name is case-insensitive).
 
@@ -326,13 +347,13 @@ def test_config_accepts_valid_bias_and_init(layer_extra):
         {"init": "uniform"},
     ],
 )
-def test_config_rejects_invalid_bias_and_init(layer_extra):
+def test_config_rejects_invalid_bias_and_init(layer_extra: dict[str, Any]) -> None:
     """
     The config validator rejects invalid "use_bias" and "init" settings.
 
     Parameters
     ----------
-    layer_extra : dict
+    layer_extra : dict[str, Any]
         Invalid layer settings: use_bias "yes" (a string), use_bias 1 (an
         integer, not a boolean), or init "uniform" (unsupported scheme).
 

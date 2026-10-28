@@ -20,6 +20,7 @@ Run it with ``python -m nn_numpy.benchmarks.report`` or
 """
 
 from collections import Counter
+from collections.abc import Sequence
 import json
 import math
 import os
@@ -88,7 +89,9 @@ def load_json(path: str) -> list[dict[str, Any]]:
     Returns
     -------
     list of dict
-        The records stored in the file.
+        The records stored in the file: NumPy network runs (keys as written by
+        nn_numpy.modeling.train) or library runs (keys as listed in each
+        library's run_model).
 
     Notes
     -----
@@ -168,7 +171,8 @@ def select_per_seed(runs: list[dict[str, Any]], val_key: str) -> list[dict[str, 
     -------
     list of dict
         One selected run per seed, sorted by seed. Seeds whose runs all
-        have a non-finite validation metric are skipped.
+        have a non-finite validation metric are skipped. Each run is one of
+        the input dicts, unchanged, so it has the same keys.
 
     Notes
     -----
@@ -179,7 +183,7 @@ def select_per_seed(runs: list[dict[str, Any]], val_key: str) -> list[dict[str, 
 
     The test set is never used for selection.
     """
-    by_seed = {}
+    by_seed: dict[int, list[dict[str, Any]]] = {}
     for run in runs:
         by_seed.setdefault(run["seed"], []).append(run)
 
@@ -191,14 +195,15 @@ def select_per_seed(runs: list[dict[str, Any]], val_key: str) -> list[dict[str, 
     return selected
 
 
-def mean_pm_std(values: list[float], digits: int) -> str:
+def mean_pm_std(values: Sequence[float | None], digits: int) -> str:
     """
     Format a list of numbers as "mean ± std".
 
     Parameters
     ----------
-    values : list of float
-        One value per seed. None values are ignored.
+    values : sequence of float or None
+        One value per seed. None values are ignored. Typed as a Sequence
+        (read-only) so a plain list of floats is accepted too.
     digits : int
         Decimal places.
 
@@ -216,8 +221,13 @@ def mean_pm_std(values: list[float], digits: int) -> str:
     values = [v for v in values if v is not None]
     if not values:
         return "-"
-    spread = stdev(values) if len(values) > 1 else 0.0
-    return f"{mean(values):.{digits}f} ± {spread:.{digits}f}"
+    # The ignores: None was filtered out above, but mypy keeps a re-bound parameter's
+    # declared type, Sequence[float | None].
+    spread = stdev(values) if len(values) > 1 else 0.0  # type: ignore[type-var]  # no Nones
+    return (
+        f"{mean(values):.{digits}f} ± "  # type: ignore[type-var]  # no Nones
+        f"{spread:.{digits}f}"
+    )
 
 
 def describe_config(run: dict[str, Any]) -> str:
@@ -901,7 +911,10 @@ def main(numpy_results_path: str | None = None) -> None:
     lines.append("")
 
     # Learning curves to plot per framework: problem -> (NumPy run, framework run).
-    curves = {fw: {} for fw in FRAMEWORKS if fw in library_results}
+    # The tuned run is None when that framework has no tuned results.
+    curves: dict[str, dict[str, tuple[dict[str, Any], dict[str, Any], dict[str, Any] | None]]] = {
+        fw: {} for fw in FRAMEWORKS if fw in library_results
+    }
 
     for problem_name in PROBLEM_METRICS:
         numpy_runs = [r for r in numpy_results if r["problem_name"] == problem_name]

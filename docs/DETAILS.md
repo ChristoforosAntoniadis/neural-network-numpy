@@ -291,6 +291,32 @@ Each run also records `overfitting_epochs`: the number of consecutive epochs, en
 4. **The default random seed.** `RANDOM_SEED` in `nn_numpy/config.py` (42) is used when a config lists no `seeds`, and it's the seed that the single-seed analysis sections and the comparison plots use.
 5. **EDA display.** It's controlled by `SHOW_EDA` in `nn_numpy/modeling/train.py` (see above).
 
+### Parameter choices
+
+Values that the grid sweeps (learning rates, batch sizes, optimizers, architectures, the scikit-learn grids) or that Optuna searches are part of the experiment, so they need no justification. The fixed values are:
+
+| Value | Where | Justification |
+|---|---|---|
+| 60 / 20 / 20 train / validation / test split | `nn_numpy/features.py` | The project's fixed split, stratified for classification |
+| Seeds 42–46 | `seeds` in both configs | The values carry no meaning; 42 reproduces the original single-seed runs. Five seeds: no recorded justification |
+| 100 epochs | `epochs` | No recorded justification |
+| Patience 10, `min_delta` 1e-4, 20-epoch guard | `experiments` | No recorded justification. The Keras and PyTorch runs copy them, so all three stop by the same rule |
+| 32 units in every hidden layer | `architectures` | No recorded justification |
+| Dropout rate 0.2 | `A1-dropout`, `A2-bn-dropout` | No recorded justification (dropout is compared on vs. off; the rate is fixed) |
+| Gradient-norm cap 20 | `A2-clip` | The cap experiment under [Gradient clipping](#gradient-clipping) |
+| `normal` initialization, σ = 0.1 | `nn_numpy/nn/layers.py` | No recorded justification; kept so the original results reproduce |
+| Momentum β = 0.9 | `nn_numpy/nn/optimizers.py` | No recorded justification |
+| AdaBelief β₁ = 0.9, β₂ = 0.999, ε = 1e-8 | `nn_numpy/nn/optimizers.py` | Adam's recommended defaults (Kingma & Ba, 2015); AdaBelief keeps Adam's β values |
+| Muon: Nesterov momentum 0.95, 5 Newton–Schulz steps and their coefficients, ε = 1e-7 | `nn_numpy/nn/optimizers.py` | PyTorch's and Keras's Muon defaults |
+| BatchNorm momentum 0.1, ε = 1e-5 | `nn_numpy/nn/layers.py` | PyTorch's `BatchNorm1d` defaults |
+| BCE clip 1e-12, scaler floor 1e-8, sigmoid input clip ±500 | `nn_numpy/nn/losses.py`, `nn_numpy/scalers.py`, `nn_numpy/nn/activations.py` | Numerical safety; the calculations are in the code comments |
+| Convergence tolerance 1%, floor 1e-4 | `nn_numpy/analysis.py`, `nn_numpy/comparisons.py` | 1%: no recorded justification. The floor equals `min_delta` |
+| Accuracy threshold 0.5 | `nn_numpy/nn/metrics.py` | Predicts the more probable class |
+| scikit-learn: `max_iter` 5000 (logistic regression), 300 trees, 200 boosting iterations, MLP `max_iter` 500 / 1000 | `configs/benchmark_experiments.json` | No recorded justification |
+| scikit-learn: RBF kernel and `gamma="scale"` for SVM / SVR | `configs/benchmark_experiments.json` | scikit-learn's defaults |
+| scikit-learn MLPs: 32 sigmoid units, and 3 × 32 ReLU units | `configs/benchmark_experiments.json` | They mirror A1 and A2 |
+| Optuna: 50 trials, `sampler_seed` 0, search on seed 42 | `configs/tuning_experiments.json` | The seeds carry no meaning beyond reproducibility. 50 trials: no recorded justification |
+
 ### Summary
 
 The JSON files make the experiment setup mostly configurable: architectures, optimizer selection, learning rates, batch sizes, training length, early stopping, and the supported task and loss choices.

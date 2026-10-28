@@ -92,6 +92,11 @@ lint:
 	$(PYTHON_INTERPRETER) -m ruff format --check
 	$(PYTHON_INTERPRETER) -m ruff check
 
+## Check the type hints with mypy (reports only, changes nothing)
+.PHONY: typecheck
+typecheck:
+	$(PYTHON_INTERPRETER) -m mypy
+
 ## Fix lint issues and format the code with ruff (rewrites files)
 .PHONY: format
 format:
@@ -101,7 +106,7 @@ format:
 ## Delete Python caches and compiled files
 .PHONY: clean
 clean:
-	$(PYTHON_INTERPRETER) -c "import pathlib, shutil; [shutil.rmtree(p) for p in pathlib.Path('.').rglob('__pycache__') if '.venv' not in p.parts]; [shutil.rmtree(p, ignore_errors=True) for p in ('.pytest_cache', '.ruff_cache')]"
+	$(PYTHON_INTERPRETER) -c "import pathlib, shutil; [shutil.rmtree(p) for p in pathlib.Path('.').rglob('__pycache__') if '.venv' not in p.parts]; [shutil.rmtree(p, ignore_errors=True) for p in ('.pytest_cache', '.ruff_cache', '.mypy_cache')]"
 
 #################################################################################
 # Self Documenting Commands                                                     #

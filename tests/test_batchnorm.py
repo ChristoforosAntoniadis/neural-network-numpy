@@ -3,6 +3,8 @@ Tests for batch normalization, the network's train / eval switch, and
 the trainer's handling of both (checkpoints, evaluation mode, divergence).
 """
 
+from typing import Any
+
 import numpy as np
 import pytest
 from tests.test_gradients import numerical_grad
@@ -15,7 +17,7 @@ from nn_numpy.nn.network import NeuralNetwork
 from nn_numpy.nn.optimizers import get_optimizer
 
 
-def make_bn(num_features=3, seed=0):
+def make_bn(num_features: int = 3, seed: int = 0) -> BatchNorm:
     """
     Build a BatchNorm layer with non-trivial gamma and beta.
 
@@ -54,7 +56,7 @@ def make_bn(num_features=3, seed=0):
 # ------------------------------------------------------------------
 
 
-def test_training_mode_normalizes_each_feature_over_the_batch():
+def test_training_mode_normalizes_each_feature_over_the_batch() -> None:
     """
     Training-mode output has per-feature mean 0 and standard deviation 1.
 
@@ -63,6 +65,11 @@ def test_training_mode_normalizes_each_feature_over_the_batch():
     A fresh BatchNorm (gamma = 1, beta = 0) is applied to a 64x3 batch
     drawn with mean 5 and scale 3. Each output column must have mean 0
     and standard deviation 1 (up to the small eps in the denominator).
+
+    The mean is 0 up to float64 rounding (about 1e-15 here), well inside
+    atol=1e-10. The standard deviation is sqrt(var / (var + eps)); with
+    var ~ 3^2 = 9 and eps = 1e-5 that is about 1 - 1e-5 / (2 * 9) =
+    1 - 5.6e-7, well inside atol=1e-4.
     """
     X = np.random.RandomState(1).normal(loc=5.0, scale=3.0, size=(64, 3))
     bn = BatchNorm(3)  # gamma = 1, beta = 0
@@ -73,7 +80,7 @@ def test_training_mode_normalizes_each_feature_over_the_batch():
     np.testing.assert_allclose(out.std(axis=0), 1.0, atol=1e-4)
 
 
-def test_running_statistics_follow_the_momentum_rule():
+def test_running_statistics_follow_the_momentum_rule() -> None:
     """
     One training-mode forward pass updates the running statistics by momentum.
 
@@ -93,7 +100,7 @@ def test_running_statistics_follow_the_momentum_rule():
     np.testing.assert_allclose(bn.running_var, 0.9 * 1.0 + 0.1 * X.var(axis=0, keepdims=True))
 
 
-def test_eval_mode_uses_running_statistics_and_does_not_update_them():
+def test_eval_mode_uses_running_statistics_and_does_not_update_them() -> None:
     """
     Evaluation mode normalizes with the running statistics and leaves them unchanged.
 
@@ -118,7 +125,7 @@ def test_eval_mode_uses_running_statistics_and_does_not_update_them():
     np.testing.assert_array_equal(bn.running_var, [[4.0, 1.0, 0.25]])
 
 
-def test_eval_mode_prediction_is_independent_of_the_rest_of_the_batch():
+def test_eval_mode_prediction_is_independent_of_the_rest_of_the_batch() -> None:
     """
     In evaluation mode a sample's output does not depend on the other samples in the batch.
 
@@ -148,7 +155,7 @@ def test_eval_mode_prediction_is_independent_of_the_rest_of_the_batch():
 
 
 @pytest.mark.parametrize("training", [True, False])
-def test_batchnorm_gradients_match_numerical(training):
+def test_batchnorm_gradients_match_numerical(training: bool) -> None:
     """
     BatchNorm's analytic gradients for X, gamma and beta match finite differences.
 
@@ -179,8 +186,16 @@ def test_batchnorm_gradients_match_numerical(training):
     dX = bn.backward(upstream)
     analytic = {"X": dX, "gamma": bn.dgamma.copy(), "beta": bn.dbeta.copy()}
 
-    def loss_value():
-        """Return L = sum(upstream * Y) for the current X, gamma and beta."""
+    def loss_value() -> float:
+        """
+        Return L = sum(upstream * Y) for the current X, gamma and beta.
+
+        Returns
+        -------
+        float
+            The scalar loss; `numerical_grad` perturbs X, gamma or beta in
+            place between calls.
+        """
         # The training-mode forward updates the running statistics, but they
         # do not affect the training-mode output, so L is unaffected.
         return np.sum(upstream * bn.forward(X))
@@ -196,7 +211,7 @@ def test_batchnorm_gradients_match_numerical(training):
 # ------------------------------------------------------------------
 
 
-def build_bn_network(output_activation="sigmoid"):
+def build_bn_network(output_activation: str = "sigmoid") -> NeuralNetwork:
     """
     Build a small 3 -> 5 -> 1 network with batch norm on the hidden layer.
 
@@ -230,7 +245,7 @@ def build_bn_network(output_activation="sigmoid"):
     return network
 
 
-def test_batch_norm_is_placed_between_dense_and_activation():
+def test_batch_norm_is_placed_between_dense_and_activation() -> None:
     """
     A "batch_norm" layer config puts BatchNorm between Dense and its activation.
 
@@ -243,7 +258,7 @@ def test_batch_norm_is_placed_between_dense_and_activation():
     assert names == ["Dense", "BatchNorm", "ReLU", "Dense", "Sigmoid"]
 
 
-def test_batch_norm_does_not_change_the_dense_weights():
+def test_batch_norm_does_not_change_the_dense_weights() -> None:
     """
     Adding BatchNorm leaves the initial Dense weights unchanged.
 
@@ -270,7 +285,7 @@ def test_batch_norm_does_not_change_the_dense_weights():
         np.testing.assert_array_equal(a.weights, b.weights)
 
 
-def test_network_train_and_eval_set_every_layer():
+def test_network_train_and_eval_set_every_layer() -> None:
     """
     NeuralNetwork.eval() and train() set the training flag on every layer.
 
@@ -291,7 +306,7 @@ def test_network_train_and_eval_set_every_layer():
 # ------------------------------------------------------------------
 
 
-def make_classification_data(n=200, seed=0):
+def make_classification_data(n: int = 200, seed: int = 0) -> tuple[np.ndarray, np.ndarray]:
     """
     Generate a linearly separable binary classification dataset.
 
@@ -322,7 +337,7 @@ def make_classification_data(n=200, seed=0):
     return X, y
 
 
-def test_trainer_with_batch_norm_learns_and_predicts_single_samples():
+def test_trainer_with_batch_norm_learns_and_predicts_single_samples() -> None:
     """
     A batch-norm network trains well and predicts single samples consistently.
 
@@ -330,7 +345,8 @@ def test_trainer_with_batch_norm_learns_and_predicts_single_samples():
     -----
     A batch-norm classifier is trained for 30 epochs with AdaBelief on 200
     samples (50 for validation) and evaluated on the last 50. Asserted:
-    training did not diverge, the test BCE is below 0.4, every layer is in
+    training did not diverge, the test BCE is below 0.4 (always predicting
+    0.5 gives ln 2 = 0.693), every layer is in
     evaluation mode after `fit`, and a sample predicted alone gives the
     same output as when it is the first row of a 10-sample batch.
     """
@@ -351,7 +367,7 @@ def test_trainer_with_batch_norm_learns_and_predicts_single_samples():
     np.testing.assert_allclose(trainer.predict(X[250:251]), trainer.predict(X[250:260])[:1])
 
 
-def test_checkpoint_round_trip_includes_batch_norm_running_stats():
+def test_checkpoint_round_trip_includes_batch_norm_running_stats() -> None:
     """
     Trainer checkpoints save and restore BatchNorm's running statistics as well as gamma.
 
@@ -378,7 +394,7 @@ def test_checkpoint_round_trip_includes_batch_norm_running_stats():
     np.testing.assert_array_equal(bn.gamma, saved[1]["params"]["gamma"])
 
 
-def test_trainer_stops_and_flags_a_diverging_run():
+def test_trainer_stops_and_flags_a_diverging_run() -> None:
     """
     The trainer stops early and sets "diverged" when the loss stops being finite.
 
@@ -422,19 +438,19 @@ def test_trainer_stops_and_flags_a_diverging_run():
 # ------------------------------------------------------------------
 
 
-def make_config(**layer_extra):
+def make_config(**layer_extra: Any) -> dict[str, Any]:
     """
     Build a minimal valid classification config for ConfigLoader.validate.
 
     Parameters
     ----------
-    **layer_extra : dict
+    **layer_extra : Any
         Extra keys merged into the first (hidden) layer of architecture
         "A", for example `batch_norm=True`.
 
     Returns
     -------
-    dict
+    dict[str, Any]
         Config with every required top-level, preprocessing and
         experiments key, and one architecture "A": a 2-unit ReLU hidden
         layer (plus `layer_extra`) and a 1-unit sigmoid output layer.
@@ -469,7 +485,7 @@ def make_config(**layer_extra):
     }
 
 
-def test_config_accepts_batch_norm_flag():
+def test_config_accepts_batch_norm_flag() -> None:
     """
     The config validator accepts "batch_norm": true on a layer.
 
@@ -481,7 +497,7 @@ def test_config_accepts_batch_norm_flag():
 
 
 @pytest.mark.parametrize("value", ["yes", 1])
-def test_config_rejects_non_boolean_batch_norm(value):
+def test_config_rejects_non_boolean_batch_norm(value: str | int) -> None:
     """
     The config validator rejects a "batch_norm" value that is not a boolean.
 

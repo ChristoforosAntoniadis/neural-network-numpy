@@ -104,10 +104,13 @@ def convergence_epoch(
         Training loss recorded at each epoch for one run (must not be empty).
     relative_tolerance : float, default=0.01
         Relative closeness threshold to the final training loss.
-        Here, 0.01 means "within 1% of the final training loss."
+        Here, 0.01 means "within 1% of the final training loss." No recorded
+        justification for 1%.
     absolute_floor : float, default=1e-4
         Minimum tolerance allowed, so the rule does not become unrealistically
-        strict when the final training loss is extremely small.
+        strict when the final training loss is extremely small. 1e-4 equals
+        the configs' min_delta, the smallest loss change the trainer counts
+        as an improvement.
 
     Returns
     -------
@@ -269,7 +272,7 @@ def add_normalized_best_val_loss(results: list[dict[str, Any]]) -> list[dict[str
     values depend on which runs are included.
     """
     # Group runs by problem so normalization happens inside each task only.
-    problem_groups = {}
+    problem_groups: dict[str, list[dict[str, Any]]] = {}
     for run in results:
         problem_groups.setdefault(run["problem_name"], []).append(run)
 
@@ -346,7 +349,7 @@ def group_by_key(results: list[dict[str, Any]], key: str) -> dict[Any, list[dict
     2. Append each run to the list stored under its value of `key`,
        creating the list the first time a value is seen.
     """
-    groups = {}
+    groups: dict[Any, list[dict[str, Any]]] = {}
     for run in results:
         groups.setdefault(run[key], []).append(run)
     return groups
@@ -979,7 +982,8 @@ def runs_by_seed(runs: list[dict[str, Any]]) -> dict[int, list[dict[str, Any]]]:
     -------
     dict of int to list of dict
         Maps each seed to the runs with that seed. The runs are shallow
-        copies of the input dictionaries.
+        copies of the input dictionaries; they are run records, with the
+        keys listed in nn_numpy.modeling.train.run_single_experiment.
 
     Notes
     -----
@@ -1006,7 +1010,8 @@ def select_by_validation(runs: list[dict[str, Any]]) -> dict[str, Any] | None:
     -------
     dict or None
         The selected run, or None if every run diverged (or the list is
-        empty).
+        empty). A run record, with the keys listed in
+        nn_numpy.modeling.train.run_single_experiment.
 
     Notes
     -----

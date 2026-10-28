@@ -64,7 +64,7 @@ def expand_grid(grid: dict[str, list[Any]]) -> list[dict[str, Any]]:
     -------
     list of dict
         One dict per combination (the Cartesian product), with the keys in
-        sorted order.
+        sorted order. Its keys are the grid's keys, each mapped to one value.
 
     Notes
     -----
@@ -171,6 +171,7 @@ def build_optimizer(
     if name == "sgd":
         return keras.optimizers.SGD(learning_rate=learning_rate, **decay)
     if name == "momentum":
+        # 0.9 is the momentum coefficient the NumPy network uses (nn_numpy.nn.optimizers).
         return keras.optimizers.SGD(learning_rate=learning_rate, momentum=0.9, **decay)
     if name == "adam":
         return keras.optimizers.Adam(learning_rate=learning_rate, **decay)
@@ -284,6 +285,8 @@ def run_model(
        restored model's validation metric, is not finite.
     """
     training = training or {}
+    # The fallbacks are the values the NumPy configs (configs/*_experiments.json) use;
+    # configs/benchmark_experiments.json sets all four explicitly.
     stopping = training.get("early_stopping", {})
     epochs = training.get("epochs", 100)
 

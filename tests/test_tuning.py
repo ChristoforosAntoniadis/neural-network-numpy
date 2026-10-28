@@ -7,6 +7,7 @@ that library isn't installed.
 
 import json
 import math
+from typing import TYPE_CHECKING, Any
 
 import pytest
 
@@ -18,12 +19,17 @@ from nn_numpy.benchmarks.report import (
     format_tuning_table,
 )
 
+if TYPE_CHECKING:
+    from pathlib import Path
+
+    import matplotlib.figure
+
 # ------------------------------------------------------------------
 # Config and search space
 # ------------------------------------------------------------------
 
 
-def write_config(tmp_path, **changes):
+def write_config(tmp_path: "Path", **changes: Any) -> str:
     """
     Write a copy of the real tuning config with some keys changed.
 
@@ -31,7 +37,7 @@ def write_config(tmp_path, **changes):
     ----------
     tmp_path : pathlib.Path
         pytest's temporary directory.
-    **changes
+    **changes : Any
         Top-level keys to replace (a value of None removes the key).
 
     Returns
@@ -59,7 +65,7 @@ def write_config(tmp_path, **changes):
     return str(path)
 
 
-def test_the_real_tuning_config_loads():
+def test_the_real_tuning_config_loads() -> None:
     """
     configs/tuning_experiments.json passes validation and has every hyperparameter.
     """
@@ -88,7 +94,7 @@ def test_the_real_tuning_config_loads():
         {"search_space": {"learning_rate": {"low": 0.3, "high": 0.1, "log": True}}},
     ],
 )
-def test_invalid_tuning_configs_are_rejected(tmp_path, changes):
+def test_invalid_tuning_configs_are_rejected(tmp_path: "Path", changes: dict[str, Any]) -> None:
     """
     A non-positive trial count, a missing key, empty choices or low > high raise ValueError.
 
@@ -106,7 +112,7 @@ def test_invalid_tuning_configs_are_rejected(tmp_path, changes):
         load_tuning_config(write_config(tmp_path, **changes))
 
 
-def test_suggest_params_draws_one_value_per_hyperparameter():
+def test_suggest_params_draws_one_value_per_hyperparameter() -> None:
     """
     suggest_params returns the trial's value for every hyperparameter, with the right types.
 
@@ -135,7 +141,7 @@ def test_suggest_params_draws_one_value_per_hyperparameter():
 # ------------------------------------------------------------------
 
 
-def test_with_dropout_sets_hidden_layers_only():
+def test_with_dropout_sets_hidden_layers_only() -> None:
     """
     with_dropout sets the rate on every hidden layer, never on the output, and copies.
     """
@@ -148,7 +154,7 @@ def test_with_dropout_sets_hidden_layers_only():
     assert with_dropout(layers, None) is layers
 
 
-def test_keras_optimizers_take_the_weight_decay():
+def test_keras_optimizers_take_the_weight_decay() -> None:
     """
     Keras optimizers get the given weight decay; None keeps the defaults.
     """
@@ -162,7 +168,7 @@ def test_keras_optimizers_take_the_weight_decay():
     assert muon.adam_weight_decay == pytest.approx(1e-3)
 
 
-def test_torch_optimizers_take_the_weight_decay():
+def test_torch_optimizers_take_the_weight_decay() -> None:
     """
     PyTorch optimizers, including both parts of Muon, get the given weight decay.
     """
@@ -170,16 +176,32 @@ def test_torch_optimizers_take_the_weight_decay():
     from nn_numpy.benchmarks.torch_models import build_network, build_optimizer
 
     model = build_network(load_problem_config("regression")["architectures"]["A2-bn"], 8, seed=0)
+    # The ignores: build_optimizer returns Optimizer | MuonWithAdam; "momentum" always
+    # gives an Optimizer, "muon" a MuonWithAdam, whose adam is set because A2-bn has
+    # 1-D (batch-norm) parameters.
     sgd = build_optimizer("momentum", model.parameters(), 0.01, 1e-3)
-    assert sgd.param_groups[0]["weight_decay"] == pytest.approx(1e-3)
+    assert (
+        sgd.param_groups[0]["weight_decay"]  # type: ignore[union-attr]  # not MuonWithAdam
+        == pytest.approx(1e-3)
+    )
     muon = build_optimizer("muon", model.parameters(), 0.01, 1e-3)
-    assert muon.muon.param_groups[0]["weight_decay"] == pytest.approx(1e-3)
-    assert muon.adam.param_groups[0]["weight_decay"] == pytest.approx(1e-3)
+    assert (
+        muon.muon.param_groups[0]["weight_decay"]  # type: ignore[union-attr]  # MuonWithAdam
+        == pytest.approx(1e-3)
+    )
+    assert (
+        muon.adam.param_groups[0]["weight_decay"]  # type: ignore[union-attr]  # MuonWithAdam
+        == pytest.approx(1e-3)
+    )
     default = build_optimizer("muon", model.parameters(), 0.01)
-    assert default.muon.param_groups[0]["weight_decay"] == pytest.approx(0.1)
+    # 0.1 is torch.optim.Muon's default weight decay.
+    assert (
+        default.muon.param_groups[0]["weight_decay"]  # type: ignore[union-attr]  # MuonWithAdam
+        == pytest.approx(0.1)
+    )
 
 
-def test_torch_run_model_applies_tuned_dropout():
+def test_torch_run_model_applies_tuned_dropout() -> None:
     """
     A "dropout" value in the grid adds Dropout after every hidden layer of the model.
 
@@ -197,7 +219,30 @@ def test_torch_run_model_applies_tuned_dropout():
     built = []
     original = torch_models.build_network
 
-    def spy(layer_configs, input_dimension, seed):
+    def spy(layer_configs: list[dict[str, Any]], input_dimension: int, seed: int) -> nn.Sequential:
+        """
+        Build the network as usual and keep a reference to it for the assertions.
+
+        Parameters
+        ----------
+        layer_configs : list of dict
+            The architecture's layers, after with_dropout.
+        input_dimension : int
+            Number of input features.
+        seed : int
+            Seed for the weight initialization.
+
+        Returns
+        -------
+        torch.nn.Sequential
+            The model torch_models.build_network built, unchanged.
+
+        Notes
+        -----
+        Processing:
+        1. Call the original build_network.
+        2. Append the model to `built` (from the enclosing test) and return it.
+        """
         model = original(layer_configs, input_dimension, seed)
         built.append(model)
         return model
@@ -205,7 +250,7 @@ def test_torch_run_model_applies_tuned_dropout():
     torch_models.build_network = spy
     try:
         splits, baseline = load_splits("regression", 42)
-        grid = {
+        grid: dict[str, list[Any]] = {
             "optimizer": ["adam"],
             "learning_rate": [0.01],
             "batch_size": [64],
@@ -228,7 +273,7 @@ def test_torch_run_model_applies_tuned_dropout():
 # ------------------------------------------------------------------
 
 
-def test_tune_model_and_evaluate_tuned_with_pytorch():
+def test_tune_model_and_evaluate_tuned_with_pytorch() -> None:
     """
     A tiny tuning run returns the best trial's configuration, and evaluation covers every seed.
 
@@ -264,7 +309,9 @@ def test_tune_model_and_evaluate_tuned_with_pytorch():
 # ------------------------------------------------------------------
 
 
-def make_run(model, seed, test, val, params):
+def make_run(
+    model: str, seed: int, test: float, val: float, params: dict[str, Any]
+) -> dict[str, Any]:
     """
     Build a minimal framework run record for the report helpers.
 
@@ -282,7 +329,8 @@ def make_run(model, seed, test, val, params):
     Returns
     -------
     dict
-        A record with the keys the report reads.
+        A record with the keys the report reads: "model", "seed",
+        "test_metric", "val_metric", "params" and "diverged" (False).
     """
     return {
         "model": model,
@@ -294,9 +342,15 @@ def make_run(model, seed, test, val, params):
     }
 
 
-def test_describe_config_includes_tuned_weight_decay_and_dropout():
+def test_describe_config_includes_tuned_weight_decay_and_dropout() -> None:
     """
     A tuned run's description adds weight decay and dropout to the usual fields.
+
+    Notes
+    -----
+    The learning rate is shown with 3 significant digits (0.012345 -> 0.0123),
+    the weight decay in scientific notation with 1 decimal (1.2e-05) and the
+    dropout with 2 decimals (0.10).
     """
     params = {
         "optimizer": "adam",
@@ -311,7 +365,7 @@ def test_describe_config_includes_tuned_weight_decay_and_dropout():
     assert text == "A1 · adam · LR 0.0123 · bs 32 · wd 1.2e-05 · dropout 0.10"
 
 
-def test_tuning_table_compares_grid_and_tuned_per_seed():
+def test_tuning_table_compares_grid_and_tuned_per_seed() -> None:
     """
     The tuning table selects the grid model per seed and counts the seeds where tuning won.
 
@@ -319,6 +373,9 @@ def test_tuning_table_compares_grid_and_tuned_per_seed():
     -----
     Two seeds: on seed 1 the tuned model is better, on seed 2 worse, so the
     table must show "1/2 seeds" and the tuned configuration.
+    The grid selection on seed 1 is the run with validation 0.1 (test 0.5),
+    not the one with the better test score: tuned 0.3 < 0.5 is a win; on
+    seed 2, tuned 0.4 > grid 0.2 is a loss.
     """
     grid_params = {"optimizer": "adam", "learning_rate": 0.1, "batch_size": 16}
     tuned_params = {**grid_params, "weight_decay": 1e-4, "dropout": 0.2}
@@ -340,7 +397,7 @@ def test_tuning_table_compares_grid_and_tuned_per_seed():
     assert "wd 1.0e-04 · dropout 0.20" in row
 
 
-def test_count_wins_pairs_by_seed_and_ignores_ties():
+def test_count_wins_pairs_by_seed_and_ignores_ties() -> None:
     """
     count_wins compares only seeds on both sides and counts strict improvements.
 
@@ -348,6 +405,7 @@ def test_count_wins_pairs_by_seed_and_ignores_ties():
     -----
     Seed 1: NumPy better. Seed 2: a tie (not a win). Seed 3: NumPy worse.
     Seed 4 exists only on the NumPy side, so it is not compared.
+    Hence 1 win out of 3 compared seeds: (1, 3).
     """
     numpy_selected = [
         {"seed": 1, "test_metric": 0.1},
@@ -365,7 +423,7 @@ def test_count_wins_pairs_by_seed_and_ignores_ties():
     assert count_wins(numpy_selected, []) == (0, 0)
 
 
-def test_three_way_table_puts_numpy_grid_and_tuned_in_one_row():
+def test_three_way_table_puts_numpy_grid_and_tuned_in_one_row() -> None:
     """
     The three-way table selects each group per seed and shows both win counts.
 
@@ -374,6 +432,8 @@ def test_three_way_table_puts_numpy_grid_and_tuned_in_one_row():
     Two seeds. NumPy (selected on best_val_loss) beats the grid model on
     both seeds and the tuned model on one, so the row ends "2/2 / 1/2 seeds".
     Diverged NumPy runs are left out of the selection.
+    NumPy's selections are tests 0.10 and 0.30: mean 0.2000, sample std
+    sqrt(((0.10 - 0.20)^2 + (0.30 - 0.20)^2) / (2 - 1)) = sqrt(0.02) = 0.1414.
     """
     numpy_runs = [
         {"architecture": "A1", "seed": 1, "best_val_loss": 0.1, "test_metric": 0.10},
@@ -412,7 +472,9 @@ def test_three_way_table_puts_numpy_grid_and_tuned_in_one_row():
 
 
 @pytest.mark.parametrize("with_tuned", [True, False])
-def test_learning_curves_include_the_tuned_model_when_available(tmp_path, monkeypatch, with_tuned):
+def test_learning_curves_include_the_tuned_model_when_available(
+    tmp_path: "Path", monkeypatch: pytest.MonkeyPatch, with_tuned: bool
+) -> None:
     """
     The curve figure draws NumPy, grid and (if given) tuned lines, and works without tuning.
 
@@ -439,7 +501,26 @@ def test_learning_curves_include_the_tuned_model_when_available(tmp_path, monkey
     drawn = []
     original_close = report.plt.close
 
-    def record_and_close(fig):
+    def record_and_close(fig: "matplotlib.figure.Figure") -> None:
+        """
+        Record each panel's line styles, then close the figure as usual.
+
+        Parameters
+        ----------
+        fig : matplotlib.figure.Figure
+            The figure plot_learning_curves is about to close.
+
+        Returns
+        -------
+        None
+            Appends one list of line styles per panel to `drawn`.
+
+        Notes
+        -----
+        Processing:
+        1. Read the line style of every line on every axes into `drawn`.
+        2. Call the real plt.close, so no figure is left open.
+        """
         drawn.extend([[line.get_linestyle() for line in ax.get_lines()] for ax in fig.axes])
         original_close(fig)
 

@@ -5,6 +5,12 @@ Defines `NeuralNetwork`, which holds an ordered list of layers (Dense,
 optional BatchNorm, activation, optional Dropout), runs the forward and
 backward passes through them, and can build itself from an architecture
 described in a config dictionary.
+
+Input: an architecture (a list of layer dictionaries from a config), the
+input dimension and a seed; then NumPy batches and loss gradients.
+
+Output: predictions, the gradients stored on each layer, and the list of
+trainable layers the optimizers update. Nothing is written to disk.
 """
 
 from typing import Any
@@ -81,7 +87,10 @@ class NeuralNetwork:
         # Store all layers in the exact order they are added.
         # Example:
         # [Dense, ReLU, Dense, Sigmoid]
-        self.layers = []
+        # Any, not a union of the layer classes: the list is duck-typed. Every layer has
+        # forward() / backward(), and train() / eval() set a training flag on all of them,
+        # including the Dense and activation layers that never read it.
+        self.layers: list[Any] = []
 
         # Create one seeded random number generator for the whole network.
         # This is passed to each Dense layer so weight initialization

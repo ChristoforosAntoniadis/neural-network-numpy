@@ -8,7 +8,7 @@ import pandas as pd
 from nn_numpy.features import train_val_test_split
 
 
-def make_frame(n=1000, positive_rate=0.3, seed=0):
+def make_frame(n: int = 1000, positive_rate: float = 0.3, seed: int = 0) -> pd.DataFrame:
     """
     Build a small synthetic dataframe with one feature and a binary class column.
 
@@ -42,14 +42,15 @@ def make_frame(n=1000, positive_rate=0.3, seed=0):
     )
 
 
-def test_split_sizes_and_disjoint_cover():
+def test_split_sizes_and_disjoint_cover() -> None:
     """
     The split has the requested sizes and every row lands in exactly one split.
 
     Notes
     -----
     Splitting 1000 rows with val_size=0.2 and test_size=0.2 must give
-    600 / 200 / 200 rows. The three index sets must not overlap, and
+    600 / 200 / 200 rows (1000 x 0.2 = 200 each, and 1000 - 2 x 200 = 600
+    for training). The three index sets must not overlap, and
     together they must equal the original index.
     """
     df = make_frame()
@@ -62,7 +63,7 @@ def test_split_sizes_and_disjoint_cover():
     assert train_idx | val_idx | test_idx == set(df.index)
 
 
-def test_stratified_split_preserves_class_balance():
+def test_stratified_split_preserves_class_balance() -> None:
     """
     A stratified split keeps the class proportion in every split.
 
@@ -70,7 +71,11 @@ def test_stratified_split_preserves_class_balance():
     -----
     With stratify_col="class", the fraction of class 1 in the train,
     validation and test splits must each be within 0.01 of the fraction
-    in the full dataframe.
+    in the full dataframe. With about 300 positives in 1000 rows, the
+    smallest split (200 rows) has about 60; one row more or less moves
+    its fraction by 1 / 200 = 0.005, so stratification fits inside 0.01
+    while an unlucky random split (standard error about
+    sqrt(0.3 x 0.7 / 200) = 0.032) would not.
     """
     df = make_frame()
     overall = df["class"].mean()
@@ -80,7 +85,7 @@ def test_stratified_split_preserves_class_balance():
         assert abs(split["class"].mean() - overall) < 0.01
 
 
-def test_split_is_reproducible_and_seed_dependent():
+def test_split_is_reproducible_and_seed_dependent() -> None:
     """
     The same seed gives the same split, and a different seed gives a different one.
 

@@ -159,9 +159,12 @@ def _compute_convergence_metrics(
         One experiment record. Uses "train_loss_history" and
         "val_loss_history" (each a list of float, one value per epoch).
     relative_tolerance : float, default=0.01
-        Tolerance as a fraction of the final training loss (0.01 = 1%).
+        Tolerance as a fraction of the final training loss (0.01 = 1%). No
+        recorded justification for 1%.
     absolute_floor : float, default=1e-4
-        Smallest tolerance allowed, whatever the final loss is.
+        Smallest tolerance allowed, whatever the final loss is. 1e-4 equals
+        the configs' min_delta, the smallest loss change the trainer counts
+        as an improvement.
 
     Returns
     -------
@@ -847,7 +850,9 @@ def filter_optimizer_runs(
     -------
     list of dict
         The matching records, sorted SGD, Momentum, AdaBelief, Muon.
-        Normally one per optimizer; the caller checks the count.
+        Normally one per optimizer; the caller checks the count. Each is a
+        run record, with the keys listed in
+        nn_numpy.modeling.train.run_single_experiment.
 
     Raises
     ------
@@ -975,7 +980,7 @@ def plot_optimizer_comparison(
     )
 
     # Adjust spacing so the suptitle and subplots fit cleanly.
-    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    plt.tight_layout(rect=[0, 0, 1, 0.97])  # type: ignore[arg-type]  # a list works at runtime
 
     # Save and display the figure.
     _save_and_show(fig, filename)
@@ -1011,7 +1016,8 @@ def filter_depth_runs(
     -------
     list of dict
         The matching A1 and A2 records, A1 first. Normally two; the caller
-        checks the count.
+        checks the count. Each is a run record, with the keys listed in
+        nn_numpy.modeling.train.run_single_experiment.
 
     Notes
     -----
@@ -1141,7 +1147,7 @@ def plot_depth_comparison(
     )
 
     # Adjust spacing so labels and title fit properly.
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.tight_layout(rect=[0, 0, 1, 0.96])  # type: ignore[arg-type]  # a list works at runtime
 
     # Save and display the figure.
     _save_and_show(fig, filename)
@@ -1189,7 +1195,8 @@ def filter_learning_rate_runs(
     -------
     list of dict
         The matching records with learning rate 0.1 and 0.001, 0.1 first.
-        Normally two; the caller checks the count.
+        Normally two; the caller checks the count. Each is a run record,
+        with the keys listed in nn_numpy.modeling.train.run_single_experiment.
 
     Notes
     -----
@@ -1319,7 +1326,7 @@ def plot_learning_rate_comparison(
     )
 
     # Adjust spacing so labels and title fit properly.
-    plt.tight_layout(rect=[0, 0, 1, 0.96])
+    plt.tight_layout(rect=[0, 0, 1, 0.96])  # type: ignore[arg-type]  # a list works at runtime
 
     # Save and display the figure.
     _save_and_show(fig, filename)
@@ -1376,7 +1383,8 @@ def filter_variant_runs(
     -------
     list of dict
         The matching records, ordered as in ``architectures``. Normally one
-        per architecture; the caller checks the count.
+        per architecture; the caller checks the count. Each is a run record,
+        with the keys listed in nn_numpy.modeling.train.run_single_experiment.
 
     Notes
     -----
@@ -1529,7 +1537,7 @@ def plot_variant_comparison(
     )
 
     # Adjust spacing so labels and title fit properly.
-    plt.tight_layout(rect=[0, 0, 1, 0.97])
+    plt.tight_layout(rect=[0, 0, 1, 0.97])  # type: ignore[arg-type]  # a list works at runtime
 
     # Save and display the figure.
     _save_and_show(fig, filename)
